@@ -8,7 +8,8 @@ export function createQualifyTool(criteria: QualificationCriteria): Tool {
     description:
       `Califica a un candidato contra los criterios vigentes (${criteria.label}) y devuelve ` +
       'veredicto (sí/no/quizás), puntaje de 0 a 100 y motivos. ' +
-      'Pasale los datos de la empresa (nombre, url, ubicación si se conoce y texto de su sitio).',
+      'Pasale los datos de la empresa (nombre, url, ubicación si se conoce y el CONTENIDO ' +
+      'COMPLETO de su sitio que devolvió fetch_page). Evitá resumir: el puntaje depende del texto.',
     parameters: {
       type: 'object',
       properties: {
@@ -17,7 +18,7 @@ export function createQualifyTool(criteria: QualificationCriteria): Tool {
         location: { type: 'string', description: 'Ubicación, si se conoce.' },
         description: {
           type: 'string',
-          description: 'Texto del sitio o snippet de la empresa para evaluar contra los criterios.',
+          description: 'Texto completo del sitio (o snippet) de la empresa. Cuanto más texto, más preciso el puntaje.',
         },
       },
       required: ['name', 'description'],

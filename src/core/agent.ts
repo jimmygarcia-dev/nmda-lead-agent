@@ -43,6 +43,8 @@ function buildSystemPrompt(registry: ToolRegistry, criteria?: QualificationCrite
       '',
       'Si el objetivo lo pide, calificá cada candidato con qualify_lead antes de responder.',
       'Reportá solo leads calificados (veredicto "sí" o "quizás") y explicá por qué.',
+      'Si tenés disponible el tool save_lead, persistí cada candidato "sí" o "quizás" ',
+      'inmediatamente después de calificarlo, antes de seguir investigando o responder.',
     );
   }
 

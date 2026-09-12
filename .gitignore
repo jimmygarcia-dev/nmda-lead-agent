@@ -3,3 +3,6 @@ dist/
 *.log
 .env
 .DS_Store
+
+# datos locales (SQLite de la fase 4)
+data/
