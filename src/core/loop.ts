@@ -1,5 +1,6 @@
 import type { ChatMessage } from '../llm/types.js';
 import type { LLMProvider } from '../llm/LLMProvider.js';
+import type { ApprovalGate } from '../approval/types.js';
 import type { Guardrails } from '../guardrails/guardrails.js';
 import type { AgentObserver } from '../observability/types.js';
 import type { ToolRegistry } from '../tools/registry.js';
@@ -16,6 +17,7 @@ export interface LoopInput {
   onStep?: (step: AgentStep) => void;
   observer?: AgentObserver;
   guards?: Guardrails;
+  approval?: ApprovalGate;
 }
 
 export interface LoopResult {
@@ -146,43 +148,60 @@ export async function runLoop(input: LoopInput): Promise<LoopResult> {
     const step: AgentStep = { turn, thought: decision.thought, action: decision.action };
     const toolName = decision.action.tool;
     const toolArgs = decision.action.args;
-    let blockedByGuard: string | undefined;
+    let blockedReason: string | undefined;
+
+    // Valla 1: guardrails (denylist / repetición)
     const guard = input.guards?.beforeTool(toolName, toolArgs);
     if (guard && !guard.allowed) {
-      blockedByGuard = guard.reason;
-    } else {
-      try {
-        const result = await toolCallWithObserver(
-          () => input.registry.execute(toolName, toolArgs),
-          turn,
-          toolName,
-          input.observer,
-        );
-        step.result = result;
-        messages.push({ role: 'assistant', content: res.content });
-        messages.push({
-          role: 'user',
-          content: `Resultado de "${toolName}": ${JSON.stringify(result)}`,
-        });
-      } catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
-        step.error = message;
-        messages.push({ role: 'assistant', content: res.content });
-        messages.push({
-          role: 'user',
-          content: `Error al ejecutar "${toolName}": ${message}. Elegí otro tool o respondé con kind=final.`,
-        });
-      } finally {
-        input.guards?.afterTool(toolName, toolArgs);
+      blockedReason = `guardrail: ${guard.reason}`;
+      // Valla 2: aprobación humana (human-in-the-loop) para tools críticos
+    } else if (input.approval && input.approval.requiredTools.includes(toolName)) {
+      const decision = await input.approval.approver.request({
+        goal: input.userInput,
+        turn,
+        tool: toolName,
+        args: toolArgs,
+      });
+      if (!decision.approved) {
+        blockedReason = `aprobación humana rechazada: ${decision.note ?? 'sin nota'}`;
       }
     }
-    if (blockedByGuard) {
-      step.error = blockedByGuard;
+
+    if (blockedReason) {
+      step.error = blockedReason;
       messages.push({ role: 'assistant', content: res.content });
       messages.push({
         role: 'user',
-        content: `Tool "${toolName}" bloqueado por guardrail: ${blockedByGuard}. Elegí otro tool o respondé con kind=final.`,
+        content: `No se ejecutó "${toolName}": ${blockedReason}. Elegí otra acción o respondé con kind=final.`,
       });
+      steps.push(step);
+      record(step);
+      continue;
+    }
+
+    try {
+      const result = await toolCallWithObserver(
+        () => input.registry.execute(toolName, toolArgs),
+        turn,
+        toolName,
+        input.observer,
+      );
+      step.result = result;
+      messages.push({ role: 'assistant', content: res.content });
+      messages.push({
+        role: 'user',
+        content: `Resultado de "${toolName}": ${JSON.stringify(result)}`,
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      step.error = message;
+      messages.push({ role: 'assistant', content: res.content });
+      messages.push({
+        role: 'user',
+        content: `Error al ejecutar "${toolName}": ${message}. Elegí otro tool o respondé con kind=final.`,
+      });
+    } finally {
+      input.guards?.afterTool(toolName, toolArgs);
     }
     steps.push(step);
     record(step);

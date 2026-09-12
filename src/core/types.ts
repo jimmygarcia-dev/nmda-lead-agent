@@ -1,4 +1,5 @@
 import type { AgentMemory } from '../memory/memory.js';
+import type { ApprovalGate } from '../approval/types.js';
 import type { Guardrails } from '../guardrails/guardrails.js';
 import type { AgentObserver } from '../observability/types.js';
 import type { QualificationCriteria } from '../qualification/types.js';
@@ -44,6 +45,7 @@ export interface AgentConfig {
   memory?: AgentMemory;
   observer?: AgentObserver;
   guards?: Guardrails;
+  approval?: ApprovalGate;
 }
 
 export interface AgentResult {

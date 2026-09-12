@@ -13,6 +13,7 @@
     "scheduler:test": "tsx src/smoke/scheduler.ts",
     "obs:test": "tsx src/smoke/observability.ts",
     "guards:test": "tsx src/smoke/guardrails.ts",
+    "approval:test": "tsx src/smoke/approval.ts",
     "agent:test": "tsx src/smoke/agent.ts"
   },
   "keywords": [

@@ -1,4 +1,5 @@
 import type { LLMProvider } from '../llm/LLMProvider.js';
+import type { ApprovalGate } from '../approval/types.js';
 import type { Guardrails } from '../guardrails/guardrails.js';
 import type { AgentObserver } from '../observability/types.js';
 import type { ToolRegistry } from '../tools/registry.js';
@@ -73,6 +74,7 @@ export class Agent {
     memory?: AgentMemory;
     observer?: AgentObserver;
     guards?: Guardrails;
+    approval?: ApprovalGate;
   };
 
   constructor(provider: LLMProvider, registry: ToolRegistry, config: AgentConfig = {}) {
@@ -86,6 +88,7 @@ export class Agent {
       memory: config.memory,
       observer: config.observer,
       guards: config.guards,
+      approval: config.approval,
     };
   }
 
@@ -131,6 +134,7 @@ export class Agent {
         onStep,
         observer: this.config.observer,
         guards: this.config.guards,
+        approval: this.config.approval,
       });
 
       const finalAnswer = this.config.guards?.checkOutput(answer).redacted ?? answer;
