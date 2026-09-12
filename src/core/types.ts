@@ -1,4 +1,5 @@
 import type { AgentMemory } from '../memory/memory.js';
+import type { Guardrails } from '../guardrails/guardrails.js';
 import type { AgentObserver } from '../observability/types.js';
 import type { QualificationCriteria } from '../qualification/types.js';
 import type { ToolParameterSchema } from './../llm/types.js';
@@ -42,6 +43,7 @@ export interface AgentConfig {
   criteria?: QualificationCriteria;
   memory?: AgentMemory;
   observer?: AgentObserver;
+  guards?: Guardrails;
 }
 
 export interface AgentResult {

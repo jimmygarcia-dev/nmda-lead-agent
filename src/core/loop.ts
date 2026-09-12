@@ -1,5 +1,6 @@
 import type { ChatMessage } from '../llm/types.js';
 import type { LLMProvider } from '../llm/LLMProvider.js';
+import type { Guardrails } from '../guardrails/guardrails.js';
 import type { AgentObserver } from '../observability/types.js';
 import type { ToolRegistry } from '../tools/registry.js';
 import type { JsonSchema } from '../types/jsonSchema.js';
@@ -14,6 +15,7 @@ export interface LoopInput {
   maxTurns: number;
   onStep?: (step: AgentStep) => void;
   observer?: AgentObserver;
+  guards?: Guardrails;
 }
 
 export interface LoopResult {
@@ -94,16 +96,26 @@ export async function runLoop(input: LoopInput): Promise<LoopResult> {
   ];
 
   const steps: AgentStep[] = [];
+  let budgetHitReason: string | undefined;
   const record = (step: AgentStep) => {
     input.onStep?.(step);
   };
 
   for (let turn = 1; turn <= input.maxTurns; turn++) {
+    if (input.guards) {
+      const budget = input.guards.budgetMet();
+      if (!budget.allowed) {
+        budgetHitReason = budget.reason;
+        break;
+      }
+    }
+
     const res = await chatWithObserver(
       () => input.provider.chat(messages, { jsonSchema: schema, temperature: 0 }),
       turn,
       input.observer,
     );
+    input.guards?.afterLlmCall();
 
     const decision = parseDecision(res.content);
     if (!decision.ok) {
@@ -134,43 +146,63 @@ export async function runLoop(input: LoopInput): Promise<LoopResult> {
     const step: AgentStep = { turn, thought: decision.thought, action: decision.action };
     const toolName = decision.action.tool;
     const toolArgs = decision.action.args;
-    try {
-      const result = await toolCallWithObserver(
-        () => input.registry.execute(toolName, toolArgs),
-        turn,
-        toolName,
-        input.observer,
-      );
-      step.result = result;
+    let blockedByGuard: string | undefined;
+    const guard = input.guards?.beforeTool(toolName, toolArgs);
+    if (guard && !guard.allowed) {
+      blockedByGuard = guard.reason;
+    } else {
+      try {
+        const result = await toolCallWithObserver(
+          () => input.registry.execute(toolName, toolArgs),
+          turn,
+          toolName,
+          input.observer,
+        );
+        step.result = result;
+        messages.push({ role: 'assistant', content: res.content });
+        messages.push({
+          role: 'user',
+          content: `Resultado de "${toolName}": ${JSON.stringify(result)}`,
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        step.error = message;
+        messages.push({ role: 'assistant', content: res.content });
+        messages.push({
+          role: 'user',
+          content: `Error al ejecutar "${toolName}": ${message}. Elegí otro tool o respondé con kind=final.`,
+        });
+      } finally {
+        input.guards?.afterTool(toolName, toolArgs);
+      }
+    }
+    if (blockedByGuard) {
+      step.error = blockedByGuard;
       messages.push({ role: 'assistant', content: res.content });
       messages.push({
         role: 'user',
-        content: `Resultado de "${toolName}": ${JSON.stringify(result)}`,
-      });
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      step.error = message;
-      messages.push({ role: 'assistant', content: res.content });
-      messages.push({
-        role: 'user',
-        content: `Error al ejecutar "${toolName}": ${message}. Elegí otro tool o respondé con kind=final.`,
+        content: `Tool "${toolName}" bloqueado por guardrail: ${blockedByGuard}. Elegí otro tool o respondé con kind=final.`,
       });
     }
     steps.push(step);
     record(step);
   }
 
-  // Sin turnos: forzar una conclusión.
+  // Sin turnos (o guardrail de presupuesto): forzar una conclusión.
   messages.push({
     role: 'user',
     content:
-      'Se agotaron los turnos de la tarea. No podés llamar más tools. Respondé ahora con kind=final y una conclusión basada en lo observado.',
+      budgetHitReason !== undefined
+        ? `Guardrail de presupuesto activado: ${budgetHitReason}. No podés llamar más tools. ` +
+          'Respondé ahora con kind=final y una conclusión basada en lo observado.'
+        : 'Se agotaron los turnos de la tarea. No podés llamar más tools. Respondé ahora con kind=final y una conclusión basada en lo observado.',
   });
   const finalRes = await chatWithObserver(
     () => input.provider.chat(messages, { jsonSchema: schema, temperature: 0 }),
     input.maxTurns + 1,
     input.observer,
   );
+  input.guards?.afterLlmCall();
   const decision = parseDecision(finalRes.content);
   if (decision.ok && decision.action.kind === 'final') {
     const step: AgentStep = {

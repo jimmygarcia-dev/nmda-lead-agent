@@ -12,6 +12,7 @@
     "mcp:test": "tsx src/smoke/mcp.ts",
     "scheduler:test": "tsx src/smoke/scheduler.ts",
     "obs:test": "tsx src/smoke/observability.ts",
+    "guards:test": "tsx src/smoke/guardrails.ts",
     "agent:test": "tsx src/smoke/agent.ts"
   },
   "keywords": [

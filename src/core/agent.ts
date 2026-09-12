@@ -1,4 +1,5 @@
 import type { LLMProvider } from '../llm/LLMProvider.js';
+import type { Guardrails } from '../guardrails/guardrails.js';
 import type { AgentObserver } from '../observability/types.js';
 import type { ToolRegistry } from '../tools/registry.js';
 import type { AgentMemory } from '../memory/memory.js';
@@ -71,6 +72,7 @@ export class Agent {
     criteria?: QualificationCriteria;
     memory?: AgentMemory;
     observer?: AgentObserver;
+    guards?: Guardrails;
   };
 
   constructor(provider: LLMProvider, registry: ToolRegistry, config: AgentConfig = {}) {
@@ -83,6 +85,7 @@ export class Agent {
       criteria: config.criteria,
       memory: config.memory,
       observer: config.observer,
+      guards: config.guards,
     };
   }
 
@@ -94,6 +97,22 @@ export class Agent {
           console.log(`[turno ${step.turn}] ${step.thought}`);
         }
       });
+
+    if (this.config.guards) {
+      const goalCheck = this.config.guards.checkGoal(userInput);
+      if (!goalCheck.allowed) {
+        const refusal = `Objetivo rechazado por guardrail: ${goalCheck.reason}. No ejecuté nada.`;
+        const steps: AgentStep[] = [];
+        steps.push({
+          turn: 0,
+          thought: goalCheck.reason ?? 'objetivo bloqueado',
+          action: { kind: 'final', answer: refusal },
+          error: goalCheck.reason,
+        });
+        return { answer: refusal, turns: 0, steps };
+      }
+      this.config.guards.beginRun();
+    }
 
     const t0 = performance.now();
     this.config.observer?.onRunStart(userInput);
@@ -111,7 +130,10 @@ export class Agent {
         maxTurns: this.config.maxTurns,
         onStep,
         observer: this.config.observer,
+        guards: this.config.guards,
       });
+
+      const finalAnswer = this.config.guards?.checkOutput(answer).redacted ?? answer;
 
       const lastAction = steps[steps.length - 1]?.action.kind;
       this.config.observer?.onRunEnd({
@@ -119,10 +141,10 @@ export class Agent {
         turns,
         steps: steps.length,
         ms: performance.now() - t0,
-        answerLength: answer.length,
+        answerLength: finalAnswer.length,
       });
 
-      return { answer, turns, steps };
+      return { answer: finalAnswer, turns, steps };
     } catch (err) {
       this.config.observer?.onRunEnd({
         final: false,
