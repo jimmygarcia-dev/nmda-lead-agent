@@ -21,7 +21,7 @@ export class ToolRegistry {
     }));
   }
 
-  async execute(name: string, args: Record<string, unknown>): Promise<Record<string, unknown>> {
+  async execute(name: string, args: Record<string, unknown>): Promise<unknown> {
     const tool = this.tools.get(name);
     if (!tool) {
       throw new Error(`Tool no registrado: ${name}`);

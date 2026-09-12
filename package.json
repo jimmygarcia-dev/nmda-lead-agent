@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "llm:test": "tsx src/smoke/llm.ts",
+    "website:test": "tsx src/smoke/website.ts",
     "agent:test": "tsx src/smoke/agent.ts"
   },
   "keywords": [

@@ -3,16 +3,19 @@ import { Agent } from '../core/agent.js';
 import { OllamaProvider } from '../llm/OllamaProvider.js';
 import { ToolRegistry } from '../tools/registry.js';
 import { createSearchTool } from '../search/index.js';
+import { createWebsiteTool } from '../tools/website.js';
 
 const provider = new OllamaProvider();
-const registry = new ToolRegistry().register(createSearchTool());
-const agent = new Agent(provider, registry, { maxTurns: 4, verbose: true });
+const registry = new ToolRegistry()
+  .register(createSearchTool())
+  .register(createWebsiteTool());
+const agent = new Agent(provider, registry, { maxTurns: 5, verbose: true });
 
 const goal =
   process.argv.slice(2).join(' ').trim() ||
-  'Encontrá 2 empresas de diseño web en Buenos Aires, con su página web y un fragmento de qué hacen.';
+  'Encontrá una agencia de diseño web en Buenos Aires. Abrí su página web con fetch_page y resumí qué ofrece en 3 líneas.';
 
-console.log('--- Milestone 1: agente corriendo ---');
+console.log('--- Milestone 1 + PHASE 2: agente corriendo ---');
 console.log(`modelo: ${provider.modelName}`);
 console.log(`tools:  ${registry.list().map((t) => t.name).join(', ')}`);
 console.log(`objetivo: ${goal}`);

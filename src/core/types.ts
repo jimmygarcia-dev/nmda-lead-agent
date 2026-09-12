@@ -48,5 +48,5 @@ export interface Tool {
   readonly name: string;
   readonly description: string;
   readonly parameters: ToolParameterSchema;
-  execute(args: Record<string, unknown>): Promise<Record<string, unknown>> | Record<string, unknown>;
+  execute(args: Record<string, unknown>): Promise<unknown> | unknown;
 }

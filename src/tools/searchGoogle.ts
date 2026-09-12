@@ -8,7 +8,7 @@ export type { SearchResult };
  * configurado (DuckDuckGo por defecto).
  */
 export async function searchGoogle(query: string, limit = 5): Promise<SearchResult[]> {
-  const result = await createSearchTool().execute({ query, limit });
+  const result = (await createSearchTool().execute({ query, limit })) as { results?: unknown };
   if (result && Array.isArray(result.results)) {
     return result.results as SearchResult[];
   }
