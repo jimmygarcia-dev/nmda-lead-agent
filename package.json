@@ -9,6 +9,7 @@
     "qualify:test": "tsx src/smoke/qualify.ts",
     "persist:test": "tsx src/smoke/persist.ts",
     "memory:test": "tsx src/smoke/memory.ts",
+    "mcp:test": "tsx src/smoke/mcp.ts",
     "agent:test": "tsx src/smoke/agent.ts"
   },
   "keywords": [
