@@ -1,3 +1,4 @@
+import type { QualificationCriteria } from '../qualification/types.js';
 import type { ToolParameterSchema } from './../llm/types.js';
 
 export type AgentRole = 'system' | 'user' | 'assistant' | 'tool';
@@ -36,6 +37,7 @@ export interface AgentConfig {
   maxTurns?: number;
   onStep?: (step: AgentStep) => void;
   verbose?: boolean;
+  criteria?: QualificationCriteria;
 }
 
 export interface AgentResult {

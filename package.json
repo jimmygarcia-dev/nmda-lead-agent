@@ -6,6 +6,7 @@
   "scripts": {
     "llm:test": "tsx src/smoke/llm.ts",
     "website:test": "tsx src/smoke/website.ts",
+    "qualify:test": "tsx src/smoke/qualify.ts",
     "agent:test": "tsx src/smoke/agent.ts"
   },
   "keywords": [
