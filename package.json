@@ -14,6 +14,7 @@
     "obs:test": "tsx src/smoke/observability.ts",
     "guards:test": "tsx src/smoke/guardrails.ts",
     "approval:test": "tsx src/smoke/approval.ts",
+    "chat": "tsx src/cli/index.ts",
     "agent:test": "tsx src/smoke/agent.ts"
   },
   "keywords": [
