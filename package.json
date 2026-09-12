@@ -1,0 +1,23 @@
+{
+  "name": "nmda-lead-agent",
+  "version": "0.1.0",
+  "description": "NMDA Lead Agent - sistema agéntico real aprendido desde cero (no framework).",
+  "type": "module",
+  "scripts": {
+    "llm:test": "tsx src/smoke/llm.ts",
+    "agent:test": "tsx src/smoke/agent.ts"
+  },
+  "keywords": [
+    "agent",
+    "llm",
+    "ollama"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^22.20.2",
+    "dotenv": "^17.4.2",
+    "tsx": "^4.23.13",
+    "typescript": "^7.0.2"
+  }
+}
