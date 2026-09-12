@@ -8,6 +8,7 @@
     "website:test": "tsx src/smoke/website.ts",
     "qualify:test": "tsx src/smoke/qualify.ts",
     "persist:test": "tsx src/smoke/persist.ts",
+    "memory:test": "tsx src/smoke/memory.ts",
     "agent:test": "tsx src/smoke/agent.ts"
   },
   "keywords": [

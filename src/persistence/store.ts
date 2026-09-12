@@ -125,13 +125,18 @@ export class LeadStore {
     return Number(res.lastInsertRowid);
   }
 
-  listRuns(limit = 20): Array<{ id: number; goal: string; turns: number; created_at: string }> {
+  listRuns(
+    limit = 20,
+  ): Array<{ id: number; goal: string; answer: string; turns: number; created_at: string }> {
     const rows = this.db
-      .prepare('SELECT id, goal, turns, created_at FROM runs ORDER BY created_at DESC, id DESC LIMIT ?')
+      .prepare(
+        'SELECT id, goal, answer, turns, created_at FROM runs ORDER BY created_at DESC, id DESC LIMIT ?',
+      )
       .all(limit) as Row[];
     return rows.map((r) => ({
       id: Number(r.id),
       goal: String(r.goal),
+      answer: String(r.answer ?? ''),
       turns: Number(r.turns),
       created_at: String(r.created_at),
     }));

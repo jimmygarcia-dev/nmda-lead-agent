@@ -1,5 +1,6 @@
 import type { LLMProvider } from '../llm/LLMProvider.js';
 import type { ToolRegistry } from '../tools/registry.js';
+import type { AgentMemory } from '../memory/memory.js';
 import { criteriaToPromptText } from '../qualification/engine.js';
 import type { QualificationCriteria } from '../qualification/types.js';
 import { runLoop } from './loop.js';
@@ -7,7 +8,11 @@ import type { AgentConfig, AgentResult, AgentStep } from './types.js';
 
 const DEFAULT_MAX_TURNS = 5;
 
-function buildSystemPrompt(registry: ToolRegistry, criteria?: QualificationCriteria): string {
+function buildSystemPrompt(
+  registry: ToolRegistry,
+  criteria?: QualificationCriteria,
+  memoryText?: string,
+): string {
   const tools = registry
     .list()
     .map(
@@ -48,6 +53,10 @@ function buildSystemPrompt(registry: ToolRegistry, criteria?: QualificationCrite
     );
   }
 
+  if (memoryText) {
+    prompt.push('', memoryText);
+  }
+
   return prompt.join('\n');
 }
 
@@ -59,6 +68,7 @@ export class Agent {
     onStep?: (step: AgentStep) => void;
     verbose: boolean;
     criteria?: QualificationCriteria;
+    memory?: AgentMemory;
   };
 
   constructor(provider: LLMProvider, registry: ToolRegistry, config: AgentConfig = {}) {
@@ -69,6 +79,7 @@ export class Agent {
       onStep: config.onStep,
       verbose: config.verbose ?? false,
       criteria: config.criteria,
+      memory: config.memory,
     };
   }
 
@@ -81,10 +92,14 @@ export class Agent {
         }
       });
 
+    const memoryText = this.config.memory
+      ? this.config.memory.toContextText(this.config.memory.recall())
+      : undefined;
+
     const { answer, turns, steps } = await runLoop({
       provider: this.provider,
       registry: this.registry,
-      systemPrompt: buildSystemPrompt(this.registry, this.config.criteria),
+      systemPrompt: buildSystemPrompt(this.registry, this.config.criteria, memoryText),
       userInput,
       maxTurns: this.config.maxTurns,
       onStep,
