@@ -1,5 +1,6 @@
 import type { ChatMessage } from '../llm/types.js';
 import type { LLMProvider } from '../llm/LLMProvider.js';
+import type { AgentObserver } from '../observability/types.js';
 import type { ToolRegistry } from '../tools/registry.js';
 import type { JsonSchema } from '../types/jsonSchema.js';
 import type { AgentAction, AgentStep } from './types.js';
@@ -12,6 +13,7 @@ export interface LoopInput {
   userInput: string;
   maxTurns: number;
   onStep?: (step: AgentStep) => void;
+  observer?: AgentObserver;
 }
 
 export interface LoopResult {
@@ -97,7 +99,11 @@ export async function runLoop(input: LoopInput): Promise<LoopResult> {
   };
 
   for (let turn = 1; turn <= input.maxTurns; turn++) {
-    const res = await input.provider.chat(messages, { jsonSchema: schema, temperature: 0 });
+    const res = await chatWithObserver(
+      () => input.provider.chat(messages, { jsonSchema: schema, temperature: 0 }),
+      turn,
+      input.observer,
+    );
 
     const decision = parseDecision(res.content);
     if (!decision.ok) {
@@ -126,13 +132,20 @@ export async function runLoop(input: LoopInput): Promise<LoopResult> {
 
     // act + observe
     const step: AgentStep = { turn, thought: decision.thought, action: decision.action };
+    const toolName = decision.action.tool;
+    const toolArgs = decision.action.args;
     try {
-      const result = await input.registry.execute(decision.action.tool, decision.action.args);
+      const result = await toolCallWithObserver(
+        () => input.registry.execute(toolName, toolArgs),
+        turn,
+        toolName,
+        input.observer,
+      );
       step.result = result;
       messages.push({ role: 'assistant', content: res.content });
       messages.push({
         role: 'user',
-        content: `Resultado de "${decision.action.tool}": ${JSON.stringify(result)}`,
+        content: `Resultado de "${toolName}": ${JSON.stringify(result)}`,
       });
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
@@ -140,7 +153,7 @@ export async function runLoop(input: LoopInput): Promise<LoopResult> {
       messages.push({ role: 'assistant', content: res.content });
       messages.push({
         role: 'user',
-        content: `Error al ejecutar "${decision.action.tool}": ${message}. Elegí otro tool o respondé con kind=final.`,
+        content: `Error al ejecutar "${toolName}": ${message}. Elegí otro tool o respondé con kind=final.`,
       });
     }
     steps.push(step);
@@ -153,7 +166,11 @@ export async function runLoop(input: LoopInput): Promise<LoopResult> {
     content:
       'Se agotaron los turnos de la tarea. No podés llamar más tools. Respondé ahora con kind=final y una conclusión basada en lo observado.',
   });
-  const finalRes = await input.provider.chat(messages, { jsonSchema: schema, temperature: 0 });
+  const finalRes = await chatWithObserver(
+    () => input.provider.chat(messages, { jsonSchema: schema, temperature: 0 }),
+    input.maxTurns + 1,
+    input.observer,
+  );
   const decision = parseDecision(finalRes.content);
   if (decision.ok && decision.action.kind === 'final') {
     const step: AgentStep = {
@@ -180,4 +197,49 @@ function toolNamesOf(registry: ToolRegistry): string[] {
     toolNamesCache.set(registry, cached);
   }
   return cached;
+}
+
+async function chatWithObserver<T>(
+  call: () => Promise<T>,
+  turn: number,
+  observer?: AgentObserver,
+): Promise<T> {
+  const t0 = performance.now();
+  try {
+    const res = await call();
+    const usage = (res as { usage?: { promptTokens?: number; completionTokens?: number } }).usage;
+    observer?.onLlmCall({
+      turn,
+      ms: performance.now() - t0,
+      promptTokens: usage?.promptTokens ?? 0,
+      completionTokens: usage?.completionTokens ?? 0,
+    });
+    return res;
+  } catch (err) {
+    observer?.onLlmCall({ turn, ms: performance.now() - t0, promptTokens: 0, completionTokens: 0 });
+    throw err;
+  }
+}
+
+async function toolCallWithObserver(
+  call: () => Promise<unknown>,
+  turn: number,
+  tool: string,
+  observer?: AgentObserver,
+): Promise<unknown> {
+  const t0 = performance.now();
+  try {
+    const result = await call();
+    observer?.onToolCall({ turn, tool, ms: performance.now() - t0, ok: true });
+    return result;
+  } catch (err) {
+    observer?.onToolCall({
+      turn,
+      tool,
+      ms: performance.now() - t0,
+      ok: false,
+      error: err instanceof Error ? err.message : String(err),
+    });
+    throw err;
+  }
 }

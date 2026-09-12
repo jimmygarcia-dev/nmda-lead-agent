@@ -1,4 +1,5 @@
 import type { LLMProvider } from '../llm/LLMProvider.js';
+import type { AgentObserver } from '../observability/types.js';
 import type { ToolRegistry } from '../tools/registry.js';
 import type { AgentMemory } from '../memory/memory.js';
 import { criteriaToPromptText } from '../qualification/engine.js';
@@ -69,6 +70,7 @@ export class Agent {
     verbose: boolean;
     criteria?: QualificationCriteria;
     memory?: AgentMemory;
+    observer?: AgentObserver;
   };
 
   constructor(provider: LLMProvider, registry: ToolRegistry, config: AgentConfig = {}) {
@@ -80,6 +82,7 @@ export class Agent {
       verbose: config.verbose ?? false,
       criteria: config.criteria,
       memory: config.memory,
+      observer: config.observer,
     };
   }
 
@@ -92,19 +95,43 @@ export class Agent {
         }
       });
 
-    const memoryText = this.config.memory
-      ? this.config.memory.toContextText(this.config.memory.recall())
-      : undefined;
+    const t0 = performance.now();
+    this.config.observer?.onRunStart(userInput);
 
-    const { answer, turns, steps } = await runLoop({
-      provider: this.provider,
-      registry: this.registry,
-      systemPrompt: buildSystemPrompt(this.registry, this.config.criteria, memoryText),
-      userInput,
-      maxTurns: this.config.maxTurns,
-      onStep,
-    });
+    try {
+      const memoryText = this.config.memory
+        ? this.config.memory.toContextText(this.config.memory.recall())
+        : undefined;
 
-    return { answer, turns, steps };
+      const { answer, turns, steps } = await runLoop({
+        provider: this.provider,
+        registry: this.registry,
+        systemPrompt: buildSystemPrompt(this.registry, this.config.criteria, memoryText),
+        userInput,
+        maxTurns: this.config.maxTurns,
+        onStep,
+        observer: this.config.observer,
+      });
+
+      const lastAction = steps[steps.length - 1]?.action.kind;
+      this.config.observer?.onRunEnd({
+        final: lastAction === 'final',
+        turns,
+        steps: steps.length,
+        ms: performance.now() - t0,
+        answerLength: answer.length,
+      });
+
+      return { answer, turns, steps };
+    } catch (err) {
+      this.config.observer?.onRunEnd({
+        final: false,
+        turns: 0,
+        steps: 0,
+        ms: performance.now() - t0,
+        answerLength: 0,
+      });
+      throw err;
+    }
   }
 }

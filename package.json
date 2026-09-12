@@ -11,6 +11,7 @@
     "memory:test": "tsx src/smoke/memory.ts",
     "mcp:test": "tsx src/smoke/mcp.ts",
     "scheduler:test": "tsx src/smoke/scheduler.ts",
+    "obs:test": "tsx src/smoke/observability.ts",
     "agent:test": "tsx src/smoke/agent.ts"
   },
   "keywords": [
