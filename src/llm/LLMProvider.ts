@@ -7,5 +7,6 @@ import type { ChatMessage, ChatOptions, ChatResult } from './types.js';
  */
 export interface LLMProvider {
   readonly name: string;
+  readonly modelName: string;
   chat(messages: ChatMessage[], options?: ChatOptions): Promise<ChatResult>;
 }
