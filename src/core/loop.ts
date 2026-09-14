@@ -115,7 +115,16 @@ export async function runLoop(input: LoopInput): Promise<LoopResult> {
       }
     }
 
-    const res = await callDecision(input, messages, schema, turn);
+    let res: ChatResult;
+    try {
+      res = await callDecision(input, messages, schema, turn);
+    } catch (err) {
+      // El modelo falló o tardó demasiado (timeout): no morimos con ERROR,
+      // cortamos y concluimos con lo que ya se observó.
+      const message = err instanceof Error ? err.message : String(err);
+      budgetHitReason = `el modelo falló o tardó demasiado: ${message}`;
+      break;
+    }
     input.guards?.afterLlmCall(res.usage);
 
     const decision = parseDecision(res.content);
@@ -186,10 +195,14 @@ export async function runLoop(input: LoopInput): Promise<LoopResult> {
         input.observer,
       );
       step.result = result;
+      const resultText = JSON.stringify(result);
+      // Contexto acotado: un resultado enorme (ej. páginas enteras) petrifica el
+      // prompt y hace lentas las decisiones del modelo local.
+      const capped = resultText.length > 8000 ? resultText.slice(0, 8000) + '\n…(resultado truncado)' : resultText;
       messages.push({ role: 'assistant', content: res.content });
       messages.push({
         role: 'user',
-        content: `Resultado de "${toolName}": ${JSON.stringify(result)}`,
+        content: `Resultado de "${toolName}": ${capped}`,
       });
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
@@ -215,10 +228,17 @@ export async function runLoop(input: LoopInput): Promise<LoopResult> {
           'Respondé ahora con kind=final y una conclusión basada en lo observado.'
         : 'Se agotaron los turnos de la tarea. No podés llamar más tools. Respondé ahora con kind=final y una conclusión basada en lo observado.',
   });
-  const finalRes = await callDecision(input, messages, schema, input.maxTurns + 1);
-  input.guards?.afterLlmCall(finalRes.usage);
-  const decision = parseDecision(finalRes.content);
-  if (decision.ok && decision.action.kind === 'final') {
+  const finalRes = await callDecision(input, messages, schema, input.maxTurns + 1).catch(
+    (err: unknown) => {
+      const message = err instanceof Error ? err.message : String(err);
+      return synthesizeAnswer(input, steps, `el modelo falló al intentar concluir: ${message}`);
+    },
+  );
+  input.guards?.afterLlmCall(
+    typeof finalRes === 'string' ? undefined : finalRes.usage,
+  );
+  const decision = typeof finalRes === 'string' ? null : parseDecision(finalRes.content);
+  if (decision && decision.ok && decision.action.kind === 'final') {
     const step: AgentStep = {
       turn: input.maxTurns + 1,
       thought: decision.thought,
@@ -232,11 +252,45 @@ export async function runLoop(input: LoopInput): Promise<LoopResult> {
   return {
     answer:
       budgetHitReason !== undefined
-        ? `El ciclo se cortó antes de tiempo: ${budgetHitReason}. Revisá el objetivo o subí el presupuesto.`
+        ? `El ciclo se cortó antes de tiempo: ${budgetHitReason}. ` +
+          'Abajo va un resumen de lo observado (sin inventar nada).\n\n' +
+          synthesizeAnswer(input, steps, `se cortó por presupuesto: ${budgetHitReason}`)
         : 'El agente no llegó a una conclusión en el límite de turnos configurado.',
     turns: input.maxTurns,
     steps,
   };
+}
+
+/** Conclusión determinista (sin LLM) basada solo en los pasos ya ejecutados. */
+function synthesizeAnswer(input: LoopInput, steps: AgentStep[], reason: string): string {
+  const isToolStep = (
+    s: AgentStep,
+  ): s is AgentStep & { action: Extract<AgentAction, { kind: 'tool' }> } =>
+    s.action.kind === 'tool' && !s.error;
+
+  const lines: string[] = [];
+  const useful = steps.filter(isToolStep);
+  if (useful.length > 0) {
+    lines.push('Lo que alcancé a investigar:');
+    for (const s of useful.slice(-4)) {
+      const args = JSON.stringify(s.action.args);
+      lines.push(`  - ${s.action.tool}${args.length > 0 ? ` ${args.slice(0, 160)}` : ''}`);
+    }
+  }
+  const saved = steps.filter(
+    (s) => isToolStep(s) && s.action.tool === 'save_lead',
+  );
+  if (saved.length > 0) {
+    lines.push(`Leads guardados en la corrida: ${saved.length}.`);
+    for (const s of saved.slice(-3)) {
+      const r = s.result as { name?: string; score?: number } | undefined;
+      lines.push(`  - ${r?.name ?? '(sin nombre)'}${r?.score !== undefined ? ` (score ${r.score})` : ''}`);
+    }
+  }
+  if (lines.length === 0) lines.push('No hubo pasos completados antes del corte.');
+  lines.push('');
+  lines.push(`Nota: ${reason}. Este resumen se basa solo en lo observado, sin inventar.`);
+  return lines.join('\n');
 }
 
 function toolNamesOf(registry: ToolRegistry): string[] {

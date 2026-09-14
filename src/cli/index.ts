@@ -19,7 +19,7 @@ const STREAM = (process.env.NMDA_STREAM ?? '1') !== '0';
 // Guardrails de plata: presupuesto de tokens, límite por tool y de tiempo.
 const GUARD_MAX_TOKENS = Number(process.env.NMDA_MAX_TOKENS ?? 200_000);
 const GUARD_MAX_SAME_TOOL = Number(process.env.NMDA_MAX_SAME_TOOL ?? 3);
-const GUARD_MAX_DURATION_MS = Number(process.env.NMDA_MAX_DURATION_MS ?? 600_000);
+const GUARD_MAX_DURATION_MS = Number(process.env.NMDA_MAX_DURATION_MS ?? 900_000);
 
 const guardrails = new Guardrails({
   maxTokenBudget: GUARD_MAX_TOKENS,
