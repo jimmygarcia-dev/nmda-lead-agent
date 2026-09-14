@@ -8,6 +8,7 @@
     "deepseek:test": "tsx src/smoke/deepseek.ts",
     "router:test": "tsx src/smoke/router.ts",
     "email:test": "tsx src/smoke/emailValue.ts",
+    "export:test": "tsx src/smoke/exportCsv.ts",
     "website:test": "tsx src/smoke/website.ts",
     "qualify:test": "tsx src/smoke/qualify.ts",
     "persist:test": "tsx src/smoke/persist.ts",
