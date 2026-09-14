@@ -12,13 +12,19 @@ import { createValuePageTool } from './valuePage.js';
 import { createWebsiteTool } from './website.js';
 import { createWriteEmailTool } from './writeEmail.js';
 
+function envList(key: string, fallback: string[]): string[] {
+  const raw = process.env[key];
+  if (!raw || !raw.trim()) return fallback;
+  return raw.split(',').map((s) => s.trim()).filter(Boolean);
+}
+
 export const defaultCriteria: QualificationCriteria = {
-  label: 'Agencia de diseño y desarrollo web en México',
-  locations: ['mexico', 'cdmx', 'ciudad de mexico', 'mexico city'],
-  industries: ['agencia digital', 'desarrollo de software'],
-  services: ['diseño web', 'desarrollo web', 'e-commerce', 'landing pages'],
-  keywords: ['seo', 'aplicaciones', 'posicionamiento'],
-  minScore: 60,
+  label: process.env.NMDA_CRITERIA_LABEL || 'Agencia de diseño y desarrollo web en México',
+  locations: envList('NMDA_CRITERIA_LOCATIONS', ['mexico', 'cdmx', 'ciudad de mexico', 'mexico city']),
+  industries: envList('NMDA_CRITERIA_INDUSTRIES', ['agencia digital', 'desarrollo de software']),
+  services: envList('NMDA_CRITERIA_SERVICES', ['diseño web', 'desarrollo web', 'e-commerce', 'landing pages']),
+  keywords: envList('NMDA_CRITERIA_KEYWORDS', ['seo', 'aplicaciones', 'posicionamiento']),
+  minScore: Number(process.env.NMDA_CRITERIA_MIN_SCORE || '60'),
 };
 
 /**
