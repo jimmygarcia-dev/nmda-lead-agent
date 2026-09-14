@@ -32,6 +32,8 @@ export interface ChatOptions {
   format?: 'json';
   jsonSchema?: Record<string, unknown>;
   tools?: ToolDefinition[];
+  /** Ruta de proveedor para LLMRouter (default | quality). Otros providers lo ignoran. */
+  route?: string;
 }
 
 export interface ChatResult {
