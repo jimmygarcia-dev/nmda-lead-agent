@@ -158,6 +158,7 @@ function printBanner(): void {
     console.log('  ruta calidad (email/valoración): modelo local (sin DEEPSEEK_API_KEY)');
   }
   console.log('  tools:  ' + registry.list().map((t) => t.name).join(', '));
+  console.log('  criterio: ' + defaultCriteria.label);
   console.log('  base:   ' + DB_PATH + ` (${store.countLeads()} lead(s))`);
   console.log('  aprobación humana: ' + (REQUIRE_APPROVAL ? 'ACTIVA (save_lead pide OK)' : 'desactivada (NMDA_APPROVAL=1 para activarla)'));
   console.log('  comandos: "leads", "nuevo" (reset de la sesión), "ayuda", "salir"');
