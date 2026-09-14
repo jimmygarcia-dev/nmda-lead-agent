@@ -73,7 +73,9 @@ export class DeepSeekProvider implements LLMProvider {
 
   constructor(config: DeepSeekConfig = {}) {
     this.apiKey = config.apiKey ?? process.env.DEEPSEEK_API_KEY ?? '';
-    this.model = config.model ?? process.env.LLM_MODEL ?? 'deepseek-chat';
+    // Default deepseek-v4-pro: responde (16/09/2026 deepseek-flash queda colgado en
+    // generaciones). flash es más barato; seteá LLM_MODEL=deepseek-flash cuando vuelva.
+    this.model = config.model ?? process.env.LLM_MODEL ?? 'deepseek-v4-pro';
     this.baseUrl = (config.baseUrl ?? 'https://api.deepseek.com').replace(/\/+$/, '');
   }
 
@@ -96,6 +98,15 @@ export class DeepSeekProvider implements LLMProvider {
       body.tools = options.tools.map(toToolDefinition);
     }
 
+    // Thinking: OFF por default (decisiones rápidas del loop). Cuando se usa con tools
+    // DEBE estar OFF porque DeepSeek exige pasar reasoning_content en la siguiente ronda
+    // y nuestro loop no lo hace → forzamos OFF si hay tools.
+    const useThinking =
+      options.think === true && !(options.tools && options.tools.length > 0);
+    body.thinking = { type: useThinking ? 'enabled' : 'disabled' };
+
+    // 150s: si la API se cuelga (ej. deepseek-flash 16/09/2026) falla con error claro
+    // en vez de quedarse girando para siempre.
     const res = await fetch(`${this.baseUrl}/chat/completions`, {
       method: 'POST',
       headers: {
@@ -103,6 +114,7 @@ export class DeepSeekProvider implements LLMProvider {
         Authorization: `Bearer ${this.apiKey}`,
       },
       body: JSON.stringify(body),
+      signal: AbortSignal.timeout(150_000),
     });
 
     if (!res.ok) {
@@ -154,6 +166,9 @@ export class DeepSeekProvider implements LLMProvider {
     if (options.tools && options.tools.length > 0) {
       body.tools = options.tools.map(toToolDefinition);
     }
+    const useThinking =
+      options.think === true && !(options.tools && options.tools.length > 0);
+    body.thinking = { type: useThinking ? 'enabled' : 'disabled' };
 
     const res = await fetch(`${this.baseUrl}/chat/completions`, {
       method: 'POST',
@@ -162,6 +177,7 @@ export class DeepSeekProvider implements LLMProvider {
         Authorization: `Bearer ${this.apiKey}`,
       },
       body: JSON.stringify(body),
+      signal: AbortSignal.timeout(150_000),
     });
     if (!res.ok) {
       const text = await res.text();
@@ -171,7 +187,10 @@ export class DeepSeekProvider implements LLMProvider {
 
     let content = '';
     let usage: ChatResult['usage'];
-    const toolCalls: Array<{ id?: string; function?: { name?: string; arguments?: string } }> = [];
+    // En streaming las tool_calls llegan fragmentadas por index en delta.tool_calls
+    // (id al inicio, name en el primer fragmento, arguments acumulados). message.tool_calls
+    // no viene en streaming → hay que agregar los deltas por index.
+    const toolCalls: Array<{ index?: number; id?: string; name?: string; args?: string }> = [];
 
     const decoder = new TextDecoder();
     for await (const chunk of res.body as unknown as AsyncIterable<Uint8Array>) {
@@ -181,7 +200,18 @@ export class DeepSeekProvider implements LLMProvider {
         if (!trimmed.startsWith('data:')) continue;
         const payload = trimmed.slice(5).trim();
         if (payload === '[DONE]') continue;
-        let data: DeepSeekResponse & { choices?: Array<{ delta?: { content?: string | null } }> };
+        let data: DeepSeekResponse & {
+          choices?: Array<{
+            delta?: {
+              content?: string | null;
+              tool_calls?: Array<{
+                index?: number;
+                id?: string;
+                function?: { name?: string; arguments?: string };
+              }>;
+            };
+          }>;
+        };
         try {
           data = JSON.parse(payload);
         } catch {
@@ -191,6 +221,18 @@ export class DeepSeekProvider implements LLMProvider {
         if (typeof delta === 'string' && delta.length > 0) {
           content += delta;
           onToken?.(delta);
+        }
+        const deltaCalls = data.choices?.[0]?.delta?.tool_calls;
+        if (deltaCalls && deltaCalls.length > 0) {
+          for (const call of deltaCalls) {
+            const index = call.index ?? 0;
+            if (!toolCalls[index]) toolCalls[index] = { index };
+            if (call.id) toolCalls[index].id = call.id;
+            if (call.function?.name) toolCalls[index].name = call.function.name;
+            if (call.function?.arguments) {
+              toolCalls[index].args = (toolCalls[index].args ?? '') + call.function.arguments;
+            }
+          }
         }
         if (data.usage && data.usage.prompt_tokens !== undefined) {
           usage = {
@@ -208,8 +250,8 @@ export class DeepSeekProvider implements LLMProvider {
     if (toolCalls.length > 0) {
       result.toolCalls = toolCalls.map((tc) => ({
         id: tc.id ?? `call_${Math.random().toString(36).slice(2)}`,
-        name: tc.function?.name ?? '',
-        arguments: parseArguments(tc.function?.arguments),
+        name: tc.name ?? '',
+        arguments: parseArguments(tc.args),
       }));
     }
     return result;

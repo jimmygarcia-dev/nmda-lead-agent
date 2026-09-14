@@ -34,6 +34,13 @@ export interface ChatOptions {
   tools?: ToolDefinition[];
   /** Ruta de proveedor para LLMRouter (default | quality). Otros providers lo ignoran. */
   route?: string;
+  /**
+   * Modo thinking (razonamiento oculto antes del contenido).
+   * En DeepSeek es ON por default; acá se desactiva por defecto para
+   * decisiones JSON del loop (ahorro de tokens + latencia).
+   * Ollama: OFF por defecto en qwen3 (thinking rompe JSON estricto).
+   */
+  think?: boolean;
 }
 
 export interface ChatResult {
