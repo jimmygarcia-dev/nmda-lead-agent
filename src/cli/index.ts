@@ -3,7 +3,7 @@ import readline from 'node:readline';
 import { Agent } from '../core/agent.js';
 import { ConsoleApprover } from '../approval/consoleApprover.js';
 import type { ApprovalGate, ApprovalDecision } from '../approval/types.js';
-import { createLLMProvider } from '../llm/providerFactory.js';
+import { createRoutedProvider } from '../llm/providerFactory.js';
 import { AgentMemory } from '../memory/memory.js';
 import { LeadStore } from '../persistence/store.js';
 import { buildHostRegistry, defaultCriteria } from '../tools/host.js';
@@ -14,13 +14,22 @@ const MAX_TURNS = Number(process.env.NMDA_MAX_TURNS ?? 10);
 
 const store = new LeadStore(DB_PATH);
 const memory = new AgentMemory(store);
-const registry = buildHostRegistry(store, memory);
-const provider = createLLMProvider();
+const provider = createRoutedProvider();
+const registry = buildHostRegistry(store, memory, provider);
 
 const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
 
 let busy = false;
 let wantClose = false;
+let closed = false;
+
+function closeAll(): void {
+  if (closed) return;
+  closed = true;
+  store.close();
+  console.log('Hasta la próxima.');
+  process.exit(0);
+}
 
 /** La misma readline del REPL atiende también las aprobaciones (evita choques de streams). */
 const approval: ApprovalGate | undefined = REQUIRE_APPROVAL
@@ -97,6 +106,11 @@ function printBanner(): void {
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   console.log('  NMDA Lead Agent — modo interactivo');
   console.log(`  provider: ${provider.name} — ${provider.modelName}`);
+  if (provider.qualityProvider) {
+    console.log(`  ruta calidad (email/valoración): ${provider.qualityProvider.modelName}`);
+  } else {
+    console.log('  ruta calidad (email/valoración): modelo local (sin DEEPSEEK_API_KEY)');
+  }
   console.log('  tools:  ' + registry.list().map((t) => t.name).join(', '));
   console.log('  base:   ' + DB_PATH + ` (${store.countLeads()} lead(s))`);
   console.log('  aprobación humana: ' + (REQUIRE_APPROVAL ? 'ACTIVA (save_lead pide OK)' : 'desactivada (NMDA_APPROVAL=1 para activarla)'));
@@ -146,10 +160,7 @@ async function main(): Promise<void> {
     console.log('');
   }
 
-  store.close();
-  rl.close();
-  console.log('Hasta la próxima.');
-  process.exit(0);
+  closeAll();
 }
 
 rl.on('SIGINT', () => {
@@ -160,11 +171,7 @@ rl.on('SIGINT', () => {
 
 rl.on('close', () => {
   wantClose = true;
-  if (!busy) {
-    store.close();
-    console.log('Hasta la próxima.');
-    process.exit(0);
-  }
+  if (!busy) closeAll();
 });
 
 await main();

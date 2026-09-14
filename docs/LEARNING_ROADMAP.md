@@ -53,5 +53,25 @@ Pasos:
 - [ ] `docs/PHASE11.md` documenta el swap de provider y las diferencias de
       structured output entre Ollama y OpenAI-compatible.
 
+---
+
+## D) Fase 11b — Router de modelos (local para loop, calidad para email/valoración)
+
+Regla de oro para una máquina con 6 GB de VRAM: **no usar un solo modelo grande
+para todo**. El loop y la extracción son tareas baratas (local); el email y la
+valoración exigen mejor modelo.
+
+- `LLMRouter` (`src/llm/LLMRouter.ts`): implementa `LLMProvider`; según
+  `ChatOptions.route` manda la llamada al provider **default** (local) o al de
+  **quality** (DeepSeek). Sin key, cae al default: mismo modelo para todo.
+- `write_email` (`src/tools/writeEmail.ts`) y `value_page`
+  (`src/tools/valuePage.ts`): tools LLM que llaman por la ruta qualité (JSON
+  estricto {subject, body} y {verdict, score, strengths, weaknesses}).
+- `createRoutedProvider()` (`src/llm/providerFactory.ts`): arma el router desde
+  `.env`; `DEEPSEEK_API_KEY` presente = calidad DeepSeek, ausente = fallback local.
+- Smoke: `npm run router:test` (ruteo/fallback determinista, sin red) y
+  `npm run email:test` (tools reales contra el modelo local).
+- CLI: `npm run chat` ya usa el router y muestra la ruta de calidad en el banner.
+
 Después de esto quedan los escalones optativos del roadmap original:
 **multi-agente** y **producción**.
