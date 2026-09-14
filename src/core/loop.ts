@@ -14,6 +14,9 @@ export interface LoopInput {
   systemPrompt: string;
   userInput: string;
   maxTurns: number;
+  /** Mínimo de búsquedas correctas antes de permitir kind=final (evita rendirse
+   *  con 1 búsqueda; se exige evidencia por más flojo que sea el modelo). */
+  minSearchesBeforeFinal?: number;
   onStep?: (step: AgentStep) => void;
   observer?: AgentObserver;
   guards?: Guardrails;
@@ -146,6 +149,33 @@ export async function runLoop(input: LoopInput): Promise<LoopResult> {
     }
 
     if (decision.action.kind === 'final') {
+      const min = input.minSearchesBeforeFinal ?? 0;
+      const searches = steps.filter(
+        (s) => s.action.kind === 'tool' && s.action.tool === 'search_google' && !s.error,
+      ).length;
+      if (searches < min && turn < input.maxTurns) {
+        const step: AgentStep = {
+          turn,
+          thought: decision.thought,
+          action: decision.action,
+          error: `concluyó con solo ${searches}/${min} búsquedas hechas`,
+        };
+        steps.push(step);
+        record(step);
+        messages.push({ role: 'assistant', content: res.content || '(sin contenido)' });
+        messages.push({
+          role: 'user',
+          content:
+            'Concluiste antes de juntar evidencia suficiente ' +
+            `(${searches}/${min} búsquedas de search_google ejecutadas). ` +
+            'Antes de responder kind=final, hacé al menos ' +
+            `${min} búsquedas apuntando a fuentes distintas: ` +
+            'site:reddit.com, site:linkedin.com, site:gob.mx (licitaciones/servicios de nómina), ' +
+            'vacantes de empleos RRHH/nómina, y foros. No uses blogs de proveedores como fuente. ' +
+            'Volvé a decidir.',
+        });
+        continue;
+      }
       const step: AgentStep = { turn, thought: decision.thought, action: decision.action };
       steps.push(step);
       record(step);

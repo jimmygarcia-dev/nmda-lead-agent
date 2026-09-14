@@ -137,6 +137,7 @@ const approval: ApprovalGate | undefined = REQUIRE_APPROVAL
 
 const agent = new Agent(provider, registry, {
   maxTurns: MAX_TURNS,
+  minSearchesBeforeFinal: Number(process.env.NMDA_MIN_SEARCHES ?? 2),
   verbose: false,
   criteria: defaultCriteria,
   memory,

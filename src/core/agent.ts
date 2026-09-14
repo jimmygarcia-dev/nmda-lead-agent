@@ -99,6 +99,7 @@ export class Agent {
   private readonly registry: ToolRegistry;
   private readonly config: {
     maxTurns: number;
+    minSearchesBeforeFinal?: number;
     onStep?: (step: AgentStep) => void;
     verbose: boolean;
     criteria?: QualificationCriteria;
@@ -116,6 +117,7 @@ export class Agent {
     this.registry = registry;
     this.config = {
       maxTurns: config.maxTurns ?? DEFAULT_MAX_TURNS,
+      minSearchesBeforeFinal: config.minSearchesBeforeFinal,
       onStep: config.onStep,
       verbose: config.verbose ?? false,
       criteria: config.criteria,
@@ -182,6 +184,7 @@ export class Agent {
           ? `[Contexto de la sesión — pedidos anteriores ya concluidos]\n${opts.sessionContext}\n\n[Nuevo pedido del usuario]\n${userInput}`
           : userInput,
         maxTurns: this.config.maxTurns,
+        minSearchesBeforeFinal: this.config.minSearchesBeforeFinal,
         onStep,
         observer: this.config.observer,
         guards: this.config.guards,
