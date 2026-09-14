@@ -39,6 +39,8 @@ export interface AgentContext {
 
 export interface AgentConfig {
   maxTurns?: number;
+  /** Mínimo de search_google exitosas antes de permitir concluir (default: 2). */
+  minSearchesBeforeFinal?: number;
   onStep?: (step: AgentStep) => void;
   verbose?: boolean;
   criteria?: QualificationCriteria;
