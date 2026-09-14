@@ -20,11 +20,11 @@ Es la diferencia entre resolver la cuenta en una servilleta de papel
   SIN persistence                          CON persistence
   +-------------------------+              +-----------------------------+
   | RUN 1: Busco, califico  |              | RUN 1: Busco, califico      |
-  |   -> "Buenos Aires IT"  |              |   -> save_lead              |
+  |   -> "México IT"  |              |   -> save_lead              |
   |   -> se me olvida       |              |        |                    |
   +-------------------------+              |        v                    |
                                            |   +- CUADERNO (SQLite) -+  |
-                                           |   | Buenos Aires IT      |  |
+                                           |   | México IT      |  |
                                            |   | 59/100 quizás        |  |
                                            |   | 2026-09-11 12:30     |  |
                                            |   +----------------+-----+  |
@@ -73,7 +73,7 @@ le decís "guardá esto" / "traé esto".
   |----+-----------------+-------|   |----+---------------------+-------|
   | 1  | Soporte Digital | 59    |   | 1  | Buscá UNA agencia   | 5     |
   | 2  | Zapatería Pepe  | 0     |   +----+---------------------+-------+
-  | 3  | Buenos Aires IT | 76    |
+  | 3  | México IT | 76    |
   +----+-----------------+-------+
 
   leads  = lo que encontraste calificado   (el tesoro)
@@ -135,11 +135,11 @@ la base para mostrar que todo quedó.
   "kind": "tool",
   "tool": "save_lead",
   "args": {
-    "name": "Buenos Aires IT",
+    "name": "México IT",
     "url": "https://buenosairesit.com/",
     "score": 59,
     "result": "quizás",
-    "reasons": ["Coincide la ubicación buscada: buenos aires.", "Servicios que coinciden: ..."]
+    "reasons": ["Coincide la ubicación buscada: mexico.", "Servicios que coinciden: ..."]
   }
 }
 ```
@@ -153,7 +153,7 @@ la base para mostrar que todo quedó.
 **Después, al consultar (listLeads), sigue ahí:**
 
 ```
-[4] QUIZÁS 59/100 - Buenos Aires IT (https://buenosairesit.com/)
+[4] QUIZÁS 59/100 - México IT (https://buenosairesit.com/)
 [2] NO   0/100  - Zapatería Don Pepe (https://zapateria-pepe.fake)
 [1] QUIZÁS 59/100 - Soporte Digital Labs (https://soportedigital.fake)
 ```

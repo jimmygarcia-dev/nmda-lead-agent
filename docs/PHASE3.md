@@ -15,7 +15,7 @@ Pensalo como un **examen con rúbrica**:
 ```
   CANDIDATO (empresa)              RÚBRICA (criterios)             VEREDICTO
   +-----------------------+         +------------------------+      +----------+
-  | Buenos Aires IT       |         |  ¿Ubicación? Buenos     |      |  SÍ      |
+  | México IT       |         |  ¿Ubicación? Buenos     |      |  SÍ      |
   | diseño web, ecommerce | ------->|    Aires               |----->|  76/100  |
   | SEO, apps, BA         |         |  ¿Servicios? diseño web |      |  lead OK |
   +-----------------------+         |  ¿Keywords? SEO         |      +----------+
@@ -58,8 +58,8 @@ Dos "formularios":
 
 ```ts
 {
-  label: "Agencia de diseño y desarrollo web en Buenos Aires",
-  locations: ["buenos aires", "caba"],
+  label: "Agencia de diseño y desarrollo web en México",
+  locations: ["mexico", "cdmx"],
   services:  ["diseño web", "desarrollo web", "e-commerce", "landing pages"],
   keywords:  ["seo", "aplicaciones", "posicionamiento"],
   minScore:  60          // nota de aprobación
@@ -70,9 +70,9 @@ Dos "formularios":
 
 ```ts
 {
-  name: "Buenos Aires IT",
+  name: "México IT",
   url: "https://buenosairesit.com/",
-  location: "Buenos Aires",
+  location: "México",
   description: "Agencia de diseño web ... SEO ... e-commerce ..."
 }
 ```
@@ -83,7 +83,7 @@ Dos "formularios":
 {
   result: "sí",          // | "no" | "quizás"
   score: 76,             // de 0 a 100
-  reasons: ["Coincide la ubicación buscada: buenos aires", ...],
+  reasons: ["Coincide la ubicación buscada: mexico", ...],
   matched: ["diseño web", "seo", ...]   // qué términos exactos acertaron
 }
 ```
@@ -98,7 +98,7 @@ El examen está repartido en 3 bloques:
                                      (hasta 40)
 
   ¿menciona        ¿cuántos de tus     ¿cuántos términos
-  "buenos aires"?  servicios           de esa lista
+  "mexico"?  servicios           de esa lista
   si => 25 pto     aparecen?           aparecen?
   no => 0           pto = 35 * (aciertos/total)   ...
 ```
@@ -114,7 +114,7 @@ Luego:
 ```
 
 **Un detalle fino:** antes de comparar, el motor **normaliza** el texto:
-pasa todo a minúsculas y le saca los acentos ("Buenos Aires" -> "buenos
+pasa todo a minúsculas y le saca los acentos ("México" -> "buenos
 aires"). Así "Álvarez" y "alvarez" son lo mismo y no perdés candidatos por
 una tilde.
 
@@ -153,9 +153,9 @@ Así el agente SABE que su trabajo es calificar, y tiene el tool a mano.
   "kind": "tool",
   "tool": "qualify_lead",
   "args": {
-    "name": "Buenos Aires IT",
+    "name": "México IT",
     "url": "https://buenosairesit.com/",
-    "description": "Líder en Diseño y Desarrollo Web en Buenos Aires. Nuestra especialidad son el diseño web, desarrollo web, e-commerce, landing pages, SEO y aplicaciones..."
+    "description": "Líder en Diseño y Desarrollo Web en México. Nuestra especialidad son el diseño web, desarrollo web, e-commerce, landing pages, SEO y aplicaciones..."
   }
 }
 ```
@@ -168,7 +168,7 @@ Así el agente SABE que su trabajo es calificar, y tiene el tool a mano.
     "result": "sí",
     "score": 76,
     "reasons": [
-      "Coincide la ubicación buscada: buenos aires.",
+      "Coincide la ubicación buscada: mexico.",
       "Servicios que coinciden: diseno web, desarrollo web, e-commerce, landing pages (4/4).",
       "Industrias/palabras clave que coinciden: seo, aplicaciones."
     ]
@@ -177,7 +177,7 @@ Así el agente SABE que su trabajo es calificar, y tiene el tool a mano.
 ```
 
 **El agente lo usó para su respuesta final**, explicando el porqué con la
-evidencia recogida. (Mientras tanto, una zapatería de Córdoba sacó 0/100
+evidencia recogida. (Mientras tanto, una zapatería de Guadalajara sacó 0/100
 y quedó afuera.)
 
 ---
@@ -188,7 +188,7 @@ y quedó afuera.)
 |----------|---------|
 | **Motor determinístico** (reglas) en vez de "opinión libre" del modelo | Reproducible y auditable: mismo candidato = misma nota, siempre. |
 | El modelo **orquesta**, no califica solo | El LLM decide qué candidate y cuándo usar el tool; el veredicto es objetivo. |
-| `normalize()` (minúsculas + sin acentos) | Comparaciones justas; "Córdoba" != "cordoba" no debería reprobar a nadie. |
+| `normalize()` (minúsculas + sin acentos) | Comparaciones justas; "Guadalajara" != "guadalajara" no debería reprobar a nadie. |
 | Umbrales por puntaje (`minScore` y 70% de él) | Un solo rango da notas al límite; el `quizás` captura el "raya límite". |
 | Los criterios viajan en el **system prompt** | El agente "recibe el encargo" explícito y no adivina qué buscás. |
 | `matched` devuelve los términos exactos | Podés auditar: "¿por qué 76? Porque aparecieron estos 6 términos." |

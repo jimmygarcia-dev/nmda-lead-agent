@@ -167,13 +167,13 @@ SQLite es escribir otro observer y sumarlo acá — cero cambios en el core.
 ## 5. El paseo real (lo que imprime `npm run obs:test`)
 
 ```
-[turno 1] Empecemos buscando una agencia de diseño web en Buenos Aires.
+[turno 1] Empecemos buscando una agencia de diseño web en México.
 [turno 2] El primer resultado es https://buenosairesit.com/. Voy a abrir su página con fetch_page...
-[turno 3] Analizo el texto completo de la página de Buenos Aires IT para calificarla.
+[turno 3] Analizo el texto completo de la página de México IT para calificarla.
 [turno 4] 59/100, cerca del mínimo... no supera 60 pero la guardo como quizás.
 [turno 5] El lead fue guardado con ID 1. Finalizo.
 
-respuesta: ...Buenos Aires IT calificada 59/100 (quizás), guardada con ID 1...
+respuesta: ...México IT calificada 59/100 (quizás), guardada con ID 1...
 
 trace (árbol de ejecución):            <- LO NUEVO: la lupa
   run ... (5 turnos) · 138786ms

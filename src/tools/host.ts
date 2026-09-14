@@ -13,8 +13,8 @@ import { createWebsiteTool } from './website.js';
 import { createWriteEmailTool } from './writeEmail.js';
 
 export const defaultCriteria: QualificationCriteria = {
-  label: 'Agencia de diseño y desarrollo web en Buenos Aires',
-  locations: ['buenos aires', 'caba'],
+  label: 'Agencia de diseño y desarrollo web en México',
+  locations: ['mexico', 'cdmx', 'ciudad de mexico', 'mexico city'],
   industries: ['agencia digital', 'desarrollo de software'],
   services: ['diseño web', 'desarrollo web', 'e-commerce', 'landing pages'],
   keywords: ['seo', 'aplicaciones', 'posicionamiento'],

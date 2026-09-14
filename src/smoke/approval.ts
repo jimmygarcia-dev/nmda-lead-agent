@@ -23,7 +23,7 @@ console.log(
     goal: 'Auditar agencias (demo)',
     turn: 5,
     tool: 'save_lead',
-    args: { name: 'Buenos Aires IT', score: 84 },
+    args: { name: 'México IT', score: 84 },
   }),
 );
 console.log('');
@@ -65,7 +65,7 @@ const runWithDecisions = async (label: string, decisions: Array<{ approved: bool
   // pide guardar DIRECTAMENTE una agencia ya "calificada": así el save_lead
   // (y por lo tanto la aprobación humana) se ejercita sí o sí.
   const goal =
-    'Simulá que ya calificaste a la agencia "Buenos Aires IT" (url https://buenosairesit.com/, ' +
+    'Simulá que ya calificaste a la agencia "México IT" (url https://buenosairesit.com/, ' +
     'score 76, resultado "sí"). Guardala llamando a save_lead y después FINALIZÁ.';
 
   const result = await agent.run(goal);

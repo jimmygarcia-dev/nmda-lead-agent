@@ -13,18 +13,18 @@ console.log('--- smoke write_email + value_page (ruta quality, con fallback loca
 console.log('');
 
 const text =
-  'Buenos Aires IT es una agencia de diseño y desarrollo web con más de 10 años en Argentina. ' +
+  'México IT es una agencia de diseño y desarrollo web con más de 10 años en México. ' +
   'Especializada en sitios institucionales, tiendas e-commerce y landing pages de alto rendimiento. ' +
   'Ofrece posicionamiento SEO, mantenimiento integral y aplicaciones a medida. Equipo propio de ' +
   'diseñadores y desarrolladores. Trabajaron con marcas de retail, gastronomía y servicios ' +
-  'profesionales en Buenos Aires y resto del país. Contacto directo con el equipo: presupuestos en ' +
+  'profesionales en México y resto del país. Contacto directo con el equipo: presupuestos en ' +
   'menos de 48 horas. Destacan su metodología ágil y reportes de avance semanales. El sitio incluye ' +
   'casos de éxito con métricas concretas (incrementos de conversión y tráfico) y testimonios de clientes.';
 
 // (1) value_page: valoración cualitativa
 console.log('(1) value_page:');
 const valued = await registry.execute('value_page', {
-  name: 'Buenos Aires IT',
+  name: 'México IT',
   url: 'https://buenosairesit.com/',
   text,
 });
@@ -42,7 +42,7 @@ console.log('');
 // (2) write_email: primer email de contacto
 console.log('(2) write_email:');
 const emailed = await registry.execute('write_email', {
-  name: 'Buenos Aires IT',
+  name: 'México IT',
   url: 'https://buenosairesit.com/',
   services: ['diseño web', 'e-commerce', 'SEO'],
   score: 76,

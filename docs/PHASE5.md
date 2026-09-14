@@ -64,8 +64,8 @@ Ejecuciones previas:
   [#1 - 2026-09-12T...] "Auditar agencias de diseño web..." (3 turnos) -> Audité 2...
 
 Leads ya guardados (NO volver a auditar):
-  [2] NO 0/100 - Zapatería Don Pepe (Córdoba) - https://zapateria-pepe.fake
-  [1] QUIZÁS 59/100 - Soporte Digital Labs (Buenos Aires) - https://soportedigital.fake
+  [2] NO 0/100 - Zapatería Don Pepe (Guadalajara) - https://zapateria-pepe.fake
+  [1] QUIZÁS 59/100 - Soporte Digital Labs (México) - https://soportedigital.fake
 
 Si una empresa ya figura entre los leads guardados, no la vuelvas a buscar,
 calificar ni guardar...
@@ -113,7 +113,7 @@ Zapatería Pepe (no). El agente arranca con esa memoria en el prompt:
 [turno 3] fetch_page(buenosairesit)  -> lee el texto completo
 [turno 4] qualify_lead(...)          -> 59/100 quizás
 [turno 5] save_lead(...)             -> guardado con id 3
-[turno 6] final                      -> "Buenos Aires IT es nuevo, calificó quizás"
+[turno 6] final                      -> "México IT es nuevo, calificó quizás"
 ```
 
 Claves del comportamiento:
@@ -123,7 +123,7 @@ Claves del comportamiento:
 
 ```
   Antes:  memoria [Soporte, Zapatería]
-  Ahora:  memoria [Soporte, Zapatería, Buenos Aires IT]   <- sumó
+  Ahora:  memoria [Soporte, Zapatería, México IT]   <- sumó
 ```
 
 ---

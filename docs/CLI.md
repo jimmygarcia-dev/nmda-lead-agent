@@ -42,7 +42,7 @@ Dentro de la misma sesión del CLI, cada objetivo **concluido** se resume y se
 inyecta como contexto al siguiente pedido. Así podés encadenar:
 
 ```
-╭ objetivo        →  buscá agencias de diseño web en Buenos Aires
+╭ objetivo        →  buscá agencias de diseño web en México
 ╭ objetivo        →  ahora armale un email a la que calificaste mejor
 ```
 

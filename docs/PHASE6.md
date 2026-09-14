@@ -176,7 +176,7 @@ esperar pedidos por stdin y listo. Vive solo.
 (2) Agente con tools servidos por un proceso MCP aparte:
   handshake con servidor externo: {"name":"nmda-lead-tools"} (protocolo 2024-11-05)
   tools remotos disponibles: search_google, fetch_page, qualify_lead, save_lead, recall_memory
-  tools/call directo -> {"query":"agencia diseño web Buenos Aires","results":[...]}
+  tools/call directo -> {"query":"agencia diseño web México","results":[...]}
 
   [turno 1] recall_memory({})                        -> ok  (ejecutado en el hijo)
   [turno 2] search_google(...)                       -> ok  (hijo)
@@ -186,7 +186,7 @@ esperar pedidos por stdin y listo. Vive solo.
   [turno 6] final
 
   --- leads persistidos (escritos por el proceso MCP, leídos desde acá) ---
-  [2] SÍ 84/100 - Buenos Aires IT (...)
+  [2] SÍ 84/100 - México IT (...)
   [1] QUIZÁS 59/100 - Soporte Digital Labs (...)
 ```
 

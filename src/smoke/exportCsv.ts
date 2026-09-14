@@ -11,14 +11,14 @@ const store = new LeadStore(':memory:');
 const byUrl = (name: string) => ({
   name,
   url: `https://${name.toLowerCase().replaceAll(' ', '-')}.fake`,
-  location: 'Buenos Aires',
+  location: 'México',
   score: 80,
   result: 'sí',
   reasons: ['Agencia digital', 'Diseño web'],
-  matched: ['buenos aires', 'diseño web'],
+  matched: ['mexico', 'diseño web'],
 });
-store.saveLead({ ...byUrl('Agencia Móvil'), location: 'CABA', score: 85, result: 'sí', reasons: ['Diseño web, e-commerce'] });
-store.saveLead({ ...byUrl('Estudio Pixel'), location: 'Córdoba', score: 45, result: 'no', reasons: ['Cero señales', 'Calle "López"' ] });
+store.saveLead({ ...byUrl('Agencia Móvil'), location: 'CDMX', score: 85, result: 'sí', reasons: ['Diseño web, e-commerce'] });
+store.saveLead({ ...byUrl('Estudio Pixel'), location: 'Guadalajara', score: 45, result: 'no', reasons: ['Cero señales', 'Calle "López"' ] });
 
 const tool = createExportLeadsTool(store);
 

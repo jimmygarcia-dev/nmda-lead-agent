@@ -13,7 +13,7 @@ const agent = new Agent(provider, registry, { maxTurns: 5, verbose: true });
 
 const goal =
   process.argv.slice(2).join(' ').trim() ||
-  'Encontrá una agencia de diseño web en Buenos Aires. Abrí su página web con fetch_page y resumí qué ofrece en 3 líneas.';
+  'Encontrá una agencia de diseño web en México. Abrí su página web con fetch_page y resumí qué ofrece en 3 líneas.';
 
 console.log('--- Milestone 1 + PHASE 2: agente corriendo ---');
 console.log(`modelo: ${provider.modelName}`);

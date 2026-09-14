@@ -9,8 +9,8 @@ import { qualify } from '../qualification/engine.js';
 import type { LeadProfile, QualificationCriteria } from '../qualification/types.js';
 
 const criteria: QualificationCriteria = {
-  label: 'Agencia de diseño y desarrollo web en Buenos Aires',
-  locations: ['buenos aires', 'caba'],
+  label: 'Agencia de diseño y desarrollo web en México',
+  locations: ['mexico', 'cdmx'],
   industries: ['agencia digital', 'desarrollo de software'],
   services: ['diseño web', 'desarrollo web', 'e-commerce', 'landing pages'],
   keywords: ['seo', 'aplicaciones', 'posicionamiento'],
@@ -24,16 +24,16 @@ console.log('');
 console.log('(1) Motor determinístico con candidatos de ejemplo:');
 const candidates: LeadProfile[] = [
   {
-    name: 'Buenos Aires IT',
+    name: 'México IT',
     url: 'https://buenosairesit.com/',
-    location: 'Buenos Aires',
+    location: 'México',
     description:
-      'Agencia de diseño web y desarrollo web en Buenos Aires. Creamos sitios, e-commerce, landing pages y aplicaciones con SEO.',
+      'Agencia de diseño web y desarrollo web en México. Creamos sitios, e-commerce, landing pages y aplicaciones con SEO.',
   },
   {
     name: 'Zapatería Don Pepe',
     url: 'https://zapateria-pepe.fake',
-    location: 'Córdoba',
+    location: 'Guadalajara',
     description: 'Venta de calzado urbano y formal al por mayor y menor. Envíos a todo el país.',
   },
 ];
@@ -53,7 +53,7 @@ const agent = new Agent(provider, registry, { maxTurns: 5, verbose: true, criter
 
 const goal =
   process.argv.slice(2).join(' ').trim() ||
-  'Buscá una agencia de diseño web en Buenos Aires. Abrí su sitio con fetch_page, calificala con qualify_lead y decime si es un lead calificado y por qué.';
+  'Buscá una agencia de diseño web en México. Abrí su sitio con fetch_page, calificala con qualify_lead y decime si es un lead calificado y por qué.';
 
 console.log(`(2) Agente completo\nobjetivo: ${goal}\n`);
 const result = await agent.run(goal);

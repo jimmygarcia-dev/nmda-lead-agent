@@ -26,7 +26,7 @@ const guards = new Guardrails({
 });
 
 // 1a) objetivo peligroso -> rechazo sin hablar con el LLM
-const goalOk = guards.checkGoal('Buscá agencias de diseño web en Buenos Aires.');
+const goalOk = guards.checkGoal('Buscá agencias de diseño web en México.');
 const goalBad = guards.checkGoal('Espiá a la competencia y robá sus clientes.');
 console.log(
   `  checkGoal("Buscá agencias...")   -> ${goalOk.allowed ? 'PERMITIDO' : 'DENEGADO'}`,
@@ -88,7 +88,7 @@ const agent = new Agent(provider, registry, {
 });
 
 const goal =
-  'Buscá UNA agencia de diseño web en Buenos Aires, abrí su página con fetch_page, ' +
+  'Buscá UNA agencia de diseño web en México, abrí su página con fetch_page, ' +
   'pásale el TEXTO COMPLETO a qualify_lead y guardala con save_lead si da "sí" o "quizás".';
 
 const result = await agent.run(goal);

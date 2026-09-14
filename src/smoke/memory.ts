@@ -21,31 +21,31 @@ const store = new LeadStore(dbPath);
 store.saveLead({
   name: 'Soporte Digital Labs',
   url: 'https://soportedigital.fake',
-  location: 'Buenos Aires',
+  location: 'México',
   score: 59,
   result: 'quizás',
-  reasons: ['Coincide la ubicación buscada: buenos aires.'],
+  reasons: ['Coincide la ubicación buscada: mexico.'],
   matched: ['diseño web'],
 });
 store.saveLead({
   name: 'Zapatería Don Pepe',
   url: 'https://zapateria-pepe.fake',
-  location: 'Córdoba',
+  location: 'Guadalajara',
   score: 0,
   result: 'no',
   reasons: ['No coincide ubicación, servicios ni palabras clave.'],
   matched: [],
 });
 store.saveRun({
-  goal: 'Auditar agencias de diseño web en Buenos Aires',
+  goal: 'Auditar agencias de diseño web en México',
   answer: 'Audité 2 candidatas; una descartada (Zapatería) y una en duda (Soporte Digital).',
   turns: 3,
 });
 
 const memory = new AgentMemory(store);
 const criteria: QualificationCriteria = {
-  label: 'Agencia de diseño y desarrollo web en Buenos Aires',
-  locations: ['buenos aires', 'caba'],
+  label: 'Agencia de diseño y desarrollo web en México',
+  locations: ['mexico', 'cdmx'],
   industries: ['agencia digital', 'desarrollo de software'],
   services: ['diseño web', 'desarrollo web', 'e-commerce', 'landing pages'],
   keywords: ['seo', 'aplicaciones', 'posicionamiento'],
@@ -76,7 +76,7 @@ const agent = new Agent(provider, registry, {
 
 const goal =
   process.argv.slice(2).join(' ').trim() ||
-  'Buscá UNA agencia de diseño web en Buenos Aires que NO hayamos auditado antes. ' +
+  'Buscá UNA agencia de diseño web en México que NO hayamos auditado antes. ' +
     'Revisá la memoria (recall_memory) para no repetir. Tomá el PRIMER resultado nuevo, ' +
     'abrila con fetch_page, y pasale a qualify_lead el TEXTO COMPLETO de la página. ' +
     'Si da sí o quizás, guardala con save_lead y respondé.';

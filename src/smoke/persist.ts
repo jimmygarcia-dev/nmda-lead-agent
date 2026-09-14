@@ -17,8 +17,8 @@ rmSync(dbPath, { force: true }); // arrancamos reproducible
 const store = new LeadStore(dbPath);
 
 const criteria: QualificationCriteria = {
-  label: 'Agencia de diseño y desarrollo web en Buenos Aires',
-  locations: ['buenos aires', 'caba'],
+  label: 'Agencia de diseño y desarrollo web en México',
+  locations: ['mexico', 'cdmx'],
   industries: ['agencia digital', 'desarrollo de software'],
   services: ['diseño web', 'desarrollo web', 'e-commerce', 'landing pages'],
   keywords: ['seo', 'aplicaciones', 'posicionamiento'],
@@ -34,8 +34,8 @@ const soporte = qualify(
   {
     name: 'Soporte Digital Labs',
     url: 'https://soportedigital.fake',
-    location: 'Buenos Aires',
-    description: 'Agencia digital en Buenos Aires: diseño web, e-commerce y SEO.',
+    location: 'México',
+    description: 'Agencia digital en México: diseño web, e-commerce y SEO.',
   },
   criteria,
 );
@@ -43,15 +43,15 @@ const zapateria = qualify(
   {
     name: 'Zapatería Don Pepe',
     url: 'https://zapateria-pepe.fake',
-    location: 'Córdoba',
+    location: 'Guadalajara',
     description: 'Venta de calzado urbano y formal.',
   },
   criteria,
 );
 
-const l1 = store.saveLead({ name: 'Soporte Digital Labs', url: 'https://soportedigital.fake', location: 'Buenos Aires', score: soporte.score, result: soporte.result, reasons: soporte.reasons, matched: soporte.matched });
-const l2 = store.saveLead({ name: 'Zapatería Don Pepe', url: 'https://zapateria-pepe.fake', location: 'Córdoba', score: zapateria.score, result: zapateria.result, reasons: zapateria.reasons, matched: zapateria.matched });
-const l1again = store.saveLead({ name: 'Soporte Digital Labs', url: 'https://soportedigital.fake', location: 'Buenos Aires', score: 99, result: 'sí', reasons: ['dup'], matched: [] });
+const l1 = store.saveLead({ name: 'Soporte Digital Labs', url: 'https://soportedigital.fake', location: 'México', score: soporte.score, result: soporte.result, reasons: soporte.reasons, matched: soporte.matched });
+const l2 = store.saveLead({ name: 'Zapatería Don Pepe', url: 'https://zapateria-pepe.fake', location: 'Guadalajara', score: zapateria.score, result: zapateria.result, reasons: zapateria.reasons, matched: zapateria.matched });
+const l1again = store.saveLead({ name: 'Soporte Digital Labs', url: 'https://soportedigital.fake', location: 'México', score: 99, result: 'sí', reasons: ['dup'], matched: [] });
 console.log(`  id=${l1.id} inserted=${l1.inserted} | id=${l2.id} inserted=${l2.inserted} | re-save id=${l1again.id} inserted=${l1again.inserted} (no duplica)`);
 
 const provider = new OllamaProvider();
@@ -64,7 +64,7 @@ const agent = new Agent(provider, registry, { maxTurns: 5, verbose: true, criter
 
 const goal =
   process.argv.slice(2).join(' ').trim() ||
-  'Buscá UNA agencia de diseño web en Buenos Aires. Abrí el sitio del PRIMER resultado con fetch_page, calificalo con qualify_lead y, si da sí o quizás, guardalo enseguida con save_lead y respondé.';
+  'Buscá UNA agencia de diseño web en México. Abrí el sitio del PRIMER resultado con fetch_page, calificalo con qualify_lead y, si da sí o quizás, guardalo enseguida con save_lead y respondé.';
 
 console.log('');
 console.log(`(2) Agente completo con save_lead\nobjetivo: ${goal}\n`);
