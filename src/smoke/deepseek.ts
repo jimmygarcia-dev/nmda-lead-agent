@@ -21,7 +21,7 @@ const chat = await provider.chat(
     {
       role: 'user',
       content:
-        'Devolvé unicamente un JSON con {"ciudad":"...","temp_c":N} para Buenos Aires. Nada más.',
+        'Devolvé unicamente un JSON con {"ciudad":"...","temp_c":N} para México. Nada más.',
     },
   ],
   { jsonSchema: { type: 'object', properties: {} } },
@@ -42,7 +42,7 @@ const weatherTool: ToolDefinition = {
   },
 };
 const call = await provider.chat(
-  [{ role: 'user', content: '¿Qué temperatura hace en Buenos Aires?' }],
+  [{ role: 'user', content: '¿Qué temperatura hace en México?' }],
   { tools: [weatherTool] },
 );
 console.log(`  toolCalls: ${JSON.stringify(call.toolCalls)}`);

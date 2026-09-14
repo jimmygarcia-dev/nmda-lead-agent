@@ -16,10 +16,10 @@ const store = new LeadStore(dbPath);
 store.saveLead({
   name: 'Soporte Digital Labs',
   url: 'https://soportedigital.fake',
-  location: 'Buenos Aires',
+  location: 'México',
   score: 59,
   result: 'quizás',
-  reasons: ['Coincide la ubicación buscada: buenos aires.'],
+  reasons: ['Coincide la ubicación buscada: mexico.'],
   matched: ['diseño web'],
 });
 store.saveRun({
@@ -56,7 +56,7 @@ console.log(`  handshake con servidor externo: ${JSON.stringify(hello.serverInfo
 const remoteRegistry = await createRegistryFromMcp(client);
 console.log(`  tools remotos disponibles: ${remoteRegistry.list().map((t) => t.name).join(', ')}`);
 
-const directSearch = (await client.callTool('search_google', { query: 'agencia diseño web Buenos Aires', limit: 1 })) as {
+const directSearch = (await client.callTool('search_google', { query: 'agencia diseño web México', limit: 1 })) as {
   content: { text?: string }[];
 };
 console.log(`  tools/call directo -> ${directSearch.content[0]?.text?.slice(0, 90)}...`);
@@ -72,7 +72,7 @@ const agent = new Agent(provider, remoteRegistry, {
 
 const goal =
   process.argv.slice(2).join(' ').trim() ||
-  'Buscá UNA agencia de diseño web en Buenos Aires NUEVA (que no auditaste antes). ' +
+  'Buscá UNA agencia de diseño web en México NUEVA (que no auditaste antes). ' +
     'Revisá la memoria. Tomá el PRIMER resultado nuevo, abri lo con fetch_page, pasale el ' +
     'TEXTO COMPLETO a qualify_lead y si da sí o quizás guardala con save_lead.';
 

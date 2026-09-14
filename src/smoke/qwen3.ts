@@ -32,7 +32,7 @@ const r1 = await provider.chat(
     {
       role: 'system',
       content:
-        'Sos el orquestador de un agente de prospección. El usuario quiere encontrar agencias de diseño web en Buenos Aires. Devuelve SOLO un JSON con la próxima acción.',
+        'Sos el orquestador de un agente de prospección. El usuario quiere encontrar agencias de diseño web en México. Devuelve SOLO un JSON con la próxima acción.',
     },
     { role: 'user', content: '¿Qué hago ahora?' },
   ],

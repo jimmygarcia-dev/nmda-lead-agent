@@ -84,7 +84,7 @@ Tres helpers chiquitos que pescan datos puntuales del HTML:
 
 | Helper | Qué agarra | Ejemplo |
 |--------|------------|---------|
-| `extractTitle` | el `<title>` de la pestaña | "Agencia de Diseño Web n°1 en Buenos Aires" |
+| `extractTitle` | el `<title>` de la pestaña | "Agencia de Diseño Web n°1 en México" |
 | `extractDescription` | la meta description | "Líder en diseño web... +20 años" |
 | `extractLinks` | todos los hrefs de `<a>` | ["/diseno-web/", "https://..."] |
 
@@ -136,9 +136,9 @@ ya servida o el aviso de "no hay plato".
 ```json
 {
   "url": "https://buenosairesit.com/",
-  "title": "Agencia de Diseño y Desarrollo Web número 1 en Buenos Aires",
-  "description": "Líder en Diseño y Desarrollo Web en Buenos Aires...",
-  "text": "Agencia de Diseño y Desarrollo Web número 1 en Buenos Aires\nServicios\nDiseño Web\nGeneramos soluciones globales...",
+  "title": "Agencia de Diseño y Desarrollo Web número 1 en México",
+  "description": "Líder en Diseño y Desarrollo Web en México...",
+  "text": "Agencia de Diseño y Desarrollo Web número 1 en México\nServicios\nDiseño Web\nGeneramos soluciones globales...",
   "links": ["https://buenosairesit.com/diseno-web/", "..."],
   "truncated": true
 }

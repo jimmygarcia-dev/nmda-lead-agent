@@ -22,7 +22,7 @@ const PERSONA_UNDERDOG = [
 ].join('\n');
 
 const EXAMPLES = [
-  'buscá agencias de diseño web en Buenos Aires',
+  'buscá agencias de diseño web en México',
   'armale un email a la agencia que guardaste',
   'exportame los leads calificados en un csv',
 ];

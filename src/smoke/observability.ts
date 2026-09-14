@@ -33,7 +33,7 @@ const agent = new Agent(provider, registry, {
 });
 
 const goal =
-  'Buscá UNA sola agencia de diseño web en Buenos Aires. Tomá el PRIMER resultado nuevo, ' +
+  'Buscá UNA sola agencia de diseño web en México. Tomá el PRIMER resultado nuevo, ' +
   'abrí su página con fetch_page, pasale el TEXTO COMPLETO a qualify_lead y si da "sí" o ' +
   '"quizás" guardala con save_lead. Después FINALIZÁ (no audites más).';
 

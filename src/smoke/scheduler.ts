@@ -73,7 +73,7 @@ const minuteCron = `${String(now.getMinutes()).padStart(2, '0')} * * * *`;
 const realJob = jobStore.createJob({
   schedule: minuteCron,
   goal:
-    'Buscá UNA sola agencia de diseño web en Buenos Aires NUEVA y calificala. ' +
+    'Buscá UNA sola agencia de diseño web en México NUEVA y calificala. ' +
     'Tomá el PRIMER resultado nuevo, abrí su página con fetch_page, pasale ' +
     'el TEXTO COMPLETO a qualify_lead y si da "sí" o "quizás" guardala con save_lead. ' +
     'Después de guardar (o si no califica), FINALIZÁ con tu conclusión: no audites más agencias.',
