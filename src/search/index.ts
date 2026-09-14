@@ -1,24 +1,38 @@
 import type { Tool } from '../core/types.js';
 import { BingRssProvider } from './bingRss.js';
 import { DuckDuckGoProvider } from './duckduckgo.js';
+import { FallbackSearchProvider } from './fallback.js';
 import type { SearchProvider } from './types.js';
 
 export type { SearchProvider, SearchResult } from './types.js';
 
 /**
  * Capa abstraída de búsqueda sin API de pago.
- * SEARCH_PROVIDER=duckduckgo (default) | bing-rss
- * (Serper/Brave con API key se agregan después como providers opcionales.)
+ * Por defecto intenta duckduckgo, y si devuelve 0 cae a bing-rss.
+ * SEARCH_PROVIDER=duckduckgo | bing-rss | duckduckgo+bing-rss (override manual)
  */
 export function createSearchProvider(envName = 'SEARCH_PROVIDER'): SearchProvider {
   const name = (process.env[envName] ?? 'duckduckgo').toLowerCase();
+  if (name.includes('+')) {
+    const parts = name.split('+').map((n) => providerByName(n.trim()));
+    return new FallbackSearchProvider(parts);
+  }
+  const primary = providerByName(name);
+  const fallbacks: SearchProvider[] = [];
+  if (name === 'duckduckgo') fallbacks.push(new BingRssProvider());
+  if (name === 'bing-rss') fallbacks.push(new DuckDuckGoProvider());
+  return fallbacks.length > 0 ? new FallbackSearchProvider([primary, ...fallbacks]) : primary;
+}
+
+function providerByName(name: string): SearchProvider {
   switch (name) {
     case 'bing':
     case 'bing-rss':
       return new BingRssProvider();
     case 'duckduckgo':
-    default:
       return new DuckDuckGoProvider();
+    default:
+      throw new Error(`Provider desconocido: ${name}`);
   }
 }
 
