@@ -9,6 +9,12 @@ export interface OllamaConfig {
 export interface ChatOptions {
   temperature?: number;
   jsonSchema?: JsonSchema;
+  /**
+   * Desactiva el modo thinking (token `&lt;|ne|&gt;` al último mensaje).
+   * Defecto: OFF para la familia qwen3 (lección de este repo — el thinking no
+   * respeta JSON estricto), ON para el resto. Se sobreescribe con think: true/false.
+   */
+  think?: boolean;
 }
 
 interface OllamaResponse {
@@ -67,9 +73,21 @@ export class OllamaProvider {
   }
 
   async chat(messages: ChatMessage[], options: ChatOptions = {}): Promise<ChatResult> {
+    // Lección de este repo: los qwen3 con thinking no respetan el JSON estricto y
+    // ensucian las respuestas finales con bloques de razonamiento. Para la familia
+    // qwen3 el thinking queda apagado por defecto (se rehabilita con think: true).
+    const isQwen3 = /qwen3/i.test(this.model);
+    const toSend = messages.map(toOllamaMessage);
+    if ((options.think ?? !isQwen3) === false && toSend.length > 0) {
+      const last = toSend[toSend.length - 1];
+      if (typeof last.content === 'string' && last.content.length > 0) {
+        last.content += '<|ne|>';
+      }
+    }
+
     const body: Record<string, unknown> = {
       model: this.model,
-      messages: messages.map(toOllamaMessage),
+      messages: toSend,
       stream: false,
       temperature: options.temperature ?? 0,
     };
