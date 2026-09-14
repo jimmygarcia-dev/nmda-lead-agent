@@ -2,26 +2,43 @@ import type { Tool } from '../core/types.js';
 import { BingRssProvider } from './bingRss.js';
 import { DuckDuckGoProvider } from './duckduckgo.js';
 import { FallbackSearchProvider } from './fallback.js';
+import { SerperProvider } from './serper.js';
 import type { SearchProvider } from './types.js';
 
 export type { SearchProvider, SearchResult } from './types.js';
 
 /**
- * Capa abstraída de búsqueda sin API de pago.
- * Por defecto intenta duckduckgo, y si devuelve 0 cae a bing-rss.
- * SEARCH_PROVIDER=duckduckgo | bing-rss | duckduckgo+bing-rss (override manual)
+ * Capa abstraída de búsqueda. Por defecto:
+ * - Si hay SERPER_API_KEY: serper (Google real, respeta site:/comillas/OR) → duckduckgo → bing-rss.
+ * - Si no hay key: duckduckgo → bing-rss.
+ * SEARCH_PROVIDER=duckduckgo | bing-rss | serper | duckduckgo+bing-rss (override manual)
  */
 export function createSearchProvider(envName = 'SEARCH_PROVIDER'): SearchProvider {
-  const name = (process.env[envName] ?? 'duckduckgo').toLowerCase();
+  const name = (process.env[envName] ?? 'auto').toLowerCase();
   if (name.includes('+')) {
     const parts = name.split('+').map((n) => providerByName(n.trim()));
     return new FallbackSearchProvider(parts);
   }
-  const primary = providerByName(name);
-  const fallbacks: SearchProvider[] = [];
-  if (name === 'duckduckgo') fallbacks.push(new BingRssProvider());
-  if (name === 'bing-rss') fallbacks.push(new DuckDuckGoProvider());
-  return fallbacks.length > 0 ? new FallbackSearchProvider([primary, ...fallbacks]) : primary;
+  if (name !== 'auto') {
+    const primary = providerByName(name);
+    const fallbacks: SearchProvider[] = [];
+    if (name === 'duckduckgo') fallbacks.push(new BingRssProvider());
+    if (name === 'bing-rss') fallbacks.push(new DuckDuckGoProvider());
+    if (name === 'serper') {
+      fallbacks.push(new DuckDuckGoProvider(), new BingRssProvider());
+    }
+    return fallbacks.length > 0 ? new FallbackSearchProvider([primary, ...fallbacks]) : primary;
+  }
+  return new FallbackSearchProvider(autoChain());
+}
+
+function autoChain(): SearchProvider[] {
+  const chain: SearchProvider[] = [];
+  if (process.env.SERPER_API_KEY) {
+    chain.push(new SerperProvider());
+  }
+  chain.push(new DuckDuckGoProvider(), new BingRssProvider());
+  return chain;
 }
 
 function providerByName(name: string): SearchProvider {
@@ -31,6 +48,8 @@ function providerByName(name: string): SearchProvider {
       return new BingRssProvider();
     case 'duckduckgo':
       return new DuckDuckGoProvider();
+    case 'serper':
+      return new SerperProvider();
     default:
       throw new Error(`Provider desconocido: ${name}`);
   }
