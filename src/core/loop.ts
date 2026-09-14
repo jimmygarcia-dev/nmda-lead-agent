@@ -1,4 +1,4 @@
-import type { ChatMessage } from '../llm/types.js';
+import type { ChatMessage, ChatResult } from '../llm/types.js';
 import type { LLMProvider } from '../llm/LLMProvider.js';
 import type { ApprovalGate } from '../approval/types.js';
 import type { Guardrails } from '../guardrails/guardrails.js';
@@ -18,6 +18,9 @@ export interface LoopInput {
   observer?: AgentObserver;
   guards?: Guardrails;
   approval?: ApprovalGate;
+  /** Streaming en vivo de tokens (si el provider lo soporta). */
+  stream?: boolean;
+  onToken?: (delta: string) => void;
 }
 
 export interface LoopResult {
@@ -112,11 +115,7 @@ export async function runLoop(input: LoopInput): Promise<LoopResult> {
       }
     }
 
-    const res = await chatWithObserver(
-      () => input.provider.chat(messages, { jsonSchema: schema, temperature: 0 }),
-      turn,
-      input.observer,
-    );
+    const res = await callDecision(input, messages, schema, turn);
     input.guards?.afterLlmCall();
 
     const decision = parseDecision(res.content);
@@ -216,11 +215,7 @@ export async function runLoop(input: LoopInput): Promise<LoopResult> {
           'Respondé ahora con kind=final y una conclusión basada en lo observado.'
         : 'Se agotaron los turnos de la tarea. No podés llamar más tools. Respondé ahora con kind=final y una conclusión basada en lo observado.',
   });
-  const finalRes = await chatWithObserver(
-    () => input.provider.chat(messages, { jsonSchema: schema, temperature: 0 }),
-    input.maxTurns + 1,
-    input.observer,
-  );
+  const finalRes = await callDecision(input, messages, schema, input.maxTurns + 1);
   input.guards?.afterLlmCall();
   const decision = parseDecision(finalRes.content);
   if (decision.ok && decision.action.kind === 'final') {
@@ -248,6 +243,27 @@ function toolNamesOf(registry: ToolRegistry): string[] {
     toolNamesCache.set(registry, cached);
   }
   return cached;
+}
+
+/** Decisión del modelo: stream si el loop lo pide y el provider lo soporta. */
+async function callDecision(
+  input: LoopInput,
+  messages: ChatMessage[],
+  schema: JsonSchema,
+  turn: number,
+): Promise<ChatResult> {
+  const stream = input.stream && input.onToken && typeof input.provider.stream === 'function';
+  return chatWithObserver(
+    () => {
+      const options = { jsonSchema: schema, temperature: 0 };
+      return stream
+        ? (input.provider.stream?.(messages, options, input.onToken) ??
+            input.provider.chat(messages, options))
+        : input.provider.chat(messages, options);
+    },
+    turn,
+    input.observer,
+  );
 }
 
 async function chatWithObserver<T>(

@@ -15,6 +15,7 @@ function buildSystemPrompt(
   registry: ToolRegistry,
   criteria?: QualificationCriteria,
   memoryText?: string,
+  persona?: string,
 ): string {
   const tools = registry
     .list()
@@ -42,6 +43,10 @@ function buildSystemPrompt(
     '',
     tools || '(ninguno)',
   ];
+
+  if (persona) {
+    prompt.push('', persona);
+  }
 
   if (criteria) {
     prompt.push(
@@ -75,6 +80,9 @@ export class Agent {
     observer?: AgentObserver;
     guards?: Guardrails;
     approval?: ApprovalGate;
+    persona?: string;
+    stream?: boolean;
+    onToken?: (delta: string) => void;
   };
 
   constructor(provider: LLMProvider, registry: ToolRegistry, config: AgentConfig = {}) {
@@ -89,12 +97,19 @@ export class Agent {
       observer: config.observer,
       guards: config.guards,
       approval: config.approval,
+      persona: config.persona,
+      stream: config.stream,
+      onToken: config.onToken,
     };
   }
 
   async run(
     userInput: string,
-    opts: { sessionContext?: string } = {},
+    opts: {
+      sessionContext?: string;
+      stream?: boolean;
+      onToken?: (delta: string) => void;
+    } = {},
   ): Promise<AgentResult> {
     const onStep: (step: AgentStep) => void =
       this.config.onStep ??
@@ -131,7 +146,12 @@ export class Agent {
       const { answer, turns, steps } = await runLoop({
         provider: this.provider,
         registry: this.registry,
-        systemPrompt: buildSystemPrompt(this.registry, this.config.criteria, memoryText),
+        systemPrompt: buildSystemPrompt(
+          this.registry,
+          this.config.criteria,
+          memoryText,
+          this.config.persona,
+        ),
         userInput: opts.sessionContext
           ? `[Contexto de la sesión — pedidos anteriores ya concluidos]\n${opts.sessionContext}\n\n[Nuevo pedido del usuario]\n${userInput}`
           : userInput,
@@ -140,6 +160,8 @@ export class Agent {
         observer: this.config.observer,
         guards: this.config.guards,
         approval: this.config.approval,
+        stream: opts.stream ?? this.config.stream,
+        onToken: opts.onToken ?? this.config.onToken,
       });
 
       const finalAnswer = this.config.guards?.checkOutput(answer).redacted ?? answer;

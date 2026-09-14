@@ -1,8 +1,8 @@
 # CLI interactivo — `npm run chat`
 
-Modo interactivo donde el agente **espera un objetivo por consola**, lo ejecuta
-con el stack completo y queda esperando el siguiente. La base persiste entre
-sesiones en `data/cli.db`.
+Modo interactivo donde el agente **Underdog** espera un objetivo por consola, lo
+ejecuta con el stack completo y queda esperando el siguiente. La base persiste
+entre sesiones en `data/cli.db`.
 
 ## Uso
 
@@ -11,18 +11,30 @@ npm run chat
 ```
 
 ```
-── NMDA Lead Agent — modo interactivo ──
-modelo: qwen2.5:7b
-tools:  search_google, fetch_page, qualify_lead, save_lead, recall_memory
-base:   data/cli.db (0 lead(s))
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  Underdog — NMDA Lead Agent (modo interactivo)
+  provider: router — qwen3:8b | deepseek-chat
+  tools:  search_google, fetch_page, qualify_lead, save_lead, recall_memory,
+          export_leads_csv, write_email, value_page
+  base:   data/cli.db (0 lead(s))
 
 ╭ objetivo
 ╰ <escribí tu objetivo y Enter>
 ```
 
-El agente imprime cada paso (tool + resultado), después la respuesta final.
-Al terminar queda a la espera del próximo objetivo, con la memoria (y los
-leads guardados) de la misma sesión.
+El agente imprime cada paso como una tarjeta (`✓ search_google …`), muestra un
+spinner mientras decide y **transmite la respuesta final en vivo** (streaming).
+Al terminar queda a la espera del próximo objetivo, con la memoria (y los leads
+guardados) de la misma sesión.
+
+### Identidad
+El agente se llama **Underdog** y su voz está definida en el `persona` del config
+(`src/cli/index.ts`, `PERSONA_UNDERDOG`): directo, cordial y sin inventar datos.
+La identidad se inyecta en el system prompt, no cambia el loop.
+
+### Primer uso
+Si la base está vacía, arranca con **onboarding**: tres objetivos de ejemplo para
+copiar y una nota sobre la sesión.
 
 ## Multi-turno (sesión)
 
@@ -57,6 +69,8 @@ El límite es de 8 resúmenes por sesión (lo más viejo se descarta). El comand
 | `NMDA_DB` | `data/cli.db` | Ruta del archivo SQLite (historial + leads) |
 | `NMDA_MAX_TURNS` | `10` | Máximo de turnos de agente por objetivo |
 | `NMDA_APPROVAL` | desactivada | `1` activa la aprobación humana: el agente pide OK por consola antes de `save_lead` |
+| `NMDA_STREAM` | `1` | `0` desactiva el streaming de la respuesta final (todo se imprime al terminar) |
+| `NO_COLOR` | «» | definido, apaga los colores en la salida |
 
 ```bash
 NMDA_APPROVAL=1 NMDA_MAX_TURNS=6 npm run chat

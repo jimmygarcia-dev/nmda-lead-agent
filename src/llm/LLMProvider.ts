@@ -9,4 +9,14 @@ export interface LLMProvider {
   readonly name: string;
   readonly modelName: string;
   chat(messages: ChatMessage[], options?: ChatOptions): Promise<ChatResult>;
+  /**
+   * Streaming opcional (estilo Claude): devuelve los tokens por onToken en vivo
+   * y además el ChatResult completo al terminar. Si no está implementado, el
+   * loop cae a chat() y los onToken se emiten de una sola vez.
+   */
+  stream?(
+    messages: ChatMessage[],
+    options?: ChatOptions,
+    onToken?: (delta: string) => void,
+  ): Promise<ChatResult>;
 }

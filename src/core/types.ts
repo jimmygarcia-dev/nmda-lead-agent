@@ -46,6 +46,12 @@ export interface AgentConfig {
   observer?: AgentObserver;
   guards?: Guardrails;
   approval?: ApprovalGate;
+  /** Voz/estilo de la persona a inyectar en el system prompt (ej. identidad de marca). */
+  persona?: string;
+  /** Streaming en vivo de tokens si el provider lo soporta. */
+  stream?: boolean;
+  /** Recibe cada delta de token (para render tipo Claude). */
+  onToken?: (delta: string) => void;
 }
 
 export interface AgentResult {

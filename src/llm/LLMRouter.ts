@@ -38,4 +38,22 @@ export class LLMRouter implements LLMProvider {
       : this.defaultProvider;
     return provider.chat(messages, options);
   }
+
+  async stream(
+    messages: ChatMessage[],
+    options: ChatOptions = {},
+    onToken?: (delta: string) => void,
+  ): Promise<ChatResult> {
+    const usesQuality = options.route === ROUTE_QUALITY;
+    const provider = usesQuality && this.qualityProvider
+      ? this.qualityProvider
+      : this.defaultProvider;
+    if (typeof provider.stream === 'function') {
+      return provider.stream(messages, options, onToken);
+    }
+    // Provider sin streaming: se emite todo de una y se devuelve igual.
+    const result = await provider.chat(messages, options);
+    if (onToken && result.content) onToken(result.content);
+    return result;
+  }
 }
