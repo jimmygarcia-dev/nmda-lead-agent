@@ -10,6 +10,7 @@
     "email:test": "tsx src/smoke/emailValue.ts",
     "export:test": "tsx src/smoke/exportCsv.ts",
     "qwen3:test": "tsx src/smoke/qwen3.ts",
+    "multiturn:test": "tsx src/smoke/multiturn.ts",
     "website:test": "tsx src/smoke/website.ts",
     "qualify:test": "tsx src/smoke/qualify.ts",
     "persist:test": "tsx src/smoke/persist.ts",
