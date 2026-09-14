@@ -9,11 +9,23 @@ import { AgentMemory } from '../memory/memory.js';
 import { LeadStore } from '../persistence/store.js';
 import { buildHostRegistry, defaultCriteria } from '../tools/host.js';
 import { Spinner, createFinalAnswerWriter, style, toolCard } from './ui.js';
+import { Guardrails } from '../guardrails/guardrails.js';
+import type { AgentObserver } from '../observability/types.js';
 
 const DB_PATH = process.env.NMDA_DB ?? 'data/cli.db';
 const REQUIRE_APPROVAL = process.env.NMDA_APPROVAL === '1';
 const MAX_TURNS = Number(process.env.NMDA_MAX_TURNS ?? 10);
 const STREAM = (process.env.NMDA_STREAM ?? '1') !== '0';
+// Guardrails de plata: presupuesto de tokens, límite por tool y de tiempo.
+const GUARD_MAX_TOKENS = Number(process.env.NMDA_MAX_TOKENS ?? 200_000);
+const GUARD_MAX_SAME_TOOL = Number(process.env.NMDA_MAX_SAME_TOOL ?? 3);
+const GUARD_MAX_DURATION_MS = Number(process.env.NMDA_MAX_DURATION_MS ?? 600_000);
+
+const guardrails = new Guardrails({
+  maxTokenBudget: GUARD_MAX_TOKENS,
+  maxSameTool: GUARD_MAX_SAME_TOOL,
+  maxDurationMs: GUARD_MAX_DURATION_MS,
+});
 
 const PERSONA_UNDERDOG = [
   'Identidad: te llamás Underdog. Sos el prospector B2B del usuario: eficiente, directo y cordial,',
@@ -34,6 +46,22 @@ const registry = buildHostRegistry(store, memory, provider);
 
 const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
 const spinner = new Spinner();
+
+/** Gasto de la corrida activa (para el spinner en vivo y el resumen). */
+const live = { start: 0, tokens: 0 };
+const liveObserver: AgentObserver = {
+  onRunStart() {
+    live.start = performance.now();
+    live.tokens = 0;
+  },
+  onLlmCall(event) {
+    live.tokens += (event.promptTokens ?? 0) + (event.completionTokens ?? 0);
+  },
+  onToolCall() {},
+  onRunEnd() {},
+};
+const liveSuffix = () =>
+  `${Math.round((performance.now() - live.start) / 1000)}s · ${(live.tokens / 1000).toFixed(1)}k tok`;
 
 let busy = false;
 let wantClose = false;
@@ -113,6 +141,8 @@ const agent = new Agent(provider, registry, {
   criteria: defaultCriteria,
   memory,
   approval,
+  guards: guardrails,
+  observer: liveObserver,
   persona: PERSONA_UNDERDOG,
   onStep: (step) => {
     if (step.action.kind !== 'tool') return;
@@ -123,7 +153,7 @@ const agent = new Agent(provider, registry, {
         ? { result: step.result }
         : undefined;
     console.log(toolCard(step.action.tool, step.action.args, extra));
-    spinner.start('decidiendo');
+    spinner.start('decidiendo', liveSuffix);
   },
 });
 
@@ -202,7 +232,7 @@ async function main(): Promise<void> {
       continue;
     }
 
-    spinner.start('decidiendo');
+    spinner.start('decidiendo', liveSuffix);
     busy = true;
     const writer = createFinalAnswerWriter({ onFirstChar: () => spinner.stop() });
     try {
