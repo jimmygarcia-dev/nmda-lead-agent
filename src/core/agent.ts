@@ -92,7 +92,10 @@ export class Agent {
     };
   }
 
-  async run(userInput: string): Promise<AgentResult> {
+  async run(
+    userInput: string,
+    opts: { sessionContext?: string } = {},
+  ): Promise<AgentResult> {
     const onStep: (step: AgentStep) => void =
       this.config.onStep ??
       ((step: AgentStep) => {
@@ -129,7 +132,9 @@ export class Agent {
         provider: this.provider,
         registry: this.registry,
         systemPrompt: buildSystemPrompt(this.registry, this.config.criteria, memoryText),
-        userInput,
+        userInput: opts.sessionContext
+          ? `[Contexto de la sesión — pedidos anteriores ya concluidos]\n${opts.sessionContext}\n\n[Nuevo pedido del usuario]\n${userInput}`
+          : userInput,
         maxTurns: this.config.maxTurns,
         onStep,
         observer: this.config.observer,

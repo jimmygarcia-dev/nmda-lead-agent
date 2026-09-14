@@ -24,11 +24,29 @@ El agente imprime cada paso (tool + resultado), después la respuesta final.
 Al terminar queda a la espera del próximo objetivo, con la memoria (y los
 leads guardados) de la misma sesión.
 
+## Multi-turno (sesión)
+
+Dentro de la misma sesión del CLI, cada objetivo **concluido** se resume y se
+inyecta como contexto al siguiente pedido. Así podés encadenar:
+
+```
+╭ objetivo        →  buscá agencias de diseño web en Buenos Aires
+╭ objetivo        →  ahora armale un email a la que calificaste mejor
+```
+
+El agente ya "sabe" qué buscó, calificó y guardó en la vuelta anterior (por el
+resumen de la sesión) sin repetir el contexto. El bucle interno de cada
+objetivo (`think → decide → act`) no cambia; solo se antecede el contexto.
+
+El límite es de 8 resúmenes por sesión (lo más viejo se descarta). El comando
+`nuevo` reinicia el contexto de la sesión (no borra leads).
+
 ## Comandos dentro del chat
 
 | Comando  | Efecto |
 | -------- | ------ |
 | `leads`  | Lista los leads guardados hasta ahora |
+| `nuevo` / `new` / `reset` | Reinicia el contexto de la sesión (deja de recordar pedidos anteriores) |
 | `ayuda` / `help` | Vuelve a mostrar el banner con opciones |
 | `salir` / `exit` / `quit` / `chau` / `:q` / `done` | Cierra el chat |
 

@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import readline from 'node:readline';
 import { Agent } from '../core/agent.js';
+import type { AgentResult } from '../core/types.js';
 import { ConsoleApprover } from '../approval/consoleApprover.js';
 import type { ApprovalGate, ApprovalDecision } from '../approval/types.js';
 import { createRoutedProvider } from '../llm/providerFactory.js';
@@ -22,6 +23,43 @@ const rl = readline.createInterface({ input: process.stdin, output: process.stdo
 let busy = false;
 let wantClose = false;
 let closed = false;
+
+/** Resumen por vuelta concluida (multi-turno dentro de la sesión). */
+const sessionHistory: string[] = [];
+const SESSION_CAP = 8;
+
+function summarizeRun(goal: string, result: AgentResult): string {
+  const lines: string[] = [];
+  lines.push(`* Pedido: ${goal.slice(0, 160)}`);
+  let saved = 0;
+  for (const step of result.steps) {
+    const act = step.action;
+    if (act.kind !== 'tool') continue;
+    if (step.error) {
+      if (act.tool === 'save_lead') lines.push(`  - save_lead falló: ${step.error.slice(0, 100)}`);
+      continue;
+    }
+    if (act.tool === 'save_lead') {
+      const r = step.result as { name?: string; result?: string; id?: number };
+      saved += 1;
+      lines.push(`  - guardó lead: "${r.name ?? ''}" (id ${r.id ?? '?'}, resultado ${r.result ?? '?'})`);
+    } else if (act.tool === 'qualify_lead') {
+      const r = step.result as { name?: string; result?: string; score?: number };
+      lines.push(`  - calificó "${r.name ?? ''}": ${r.result ?? '?'} (score ${r.score ?? '?'})`);
+    } else {
+      const label = act.tool;
+      const url = (step.result as { url?: string })?.url;
+      lines.push(`  - usó ${label}${url ? ` (${url})` : ''}`);
+    }
+  }
+  if (saved === 0) lines.push('  - (no se guardó ningún lead)');
+  lines.push(`* Respuesta final: ${result.answer.replace(/\s+/g, ' ').trim().slice(0, 200)}`);
+  return lines.join('');
+}
+
+function sessionContext(): string {
+  return sessionHistory.join('\n\n');
+}
 
 function closeAll(): void {
   if (closed) return;
@@ -114,7 +152,7 @@ function printBanner(): void {
   console.log('  tools:  ' + registry.list().map((t) => t.name).join(', '));
   console.log('  base:   ' + DB_PATH + ` (${store.countLeads()} lead(s))`);
   console.log('  aprobación humana: ' + (REQUIRE_APPROVAL ? 'ACTIVA (save_lead pide OK)' : 'desactivada (NMDA_APPROVAL=1 para activarla)'));
-  console.log('  comandos: "leads", "ayuda", "salir"');
+  console.log('  comandos: "leads", "nuevo" (reset de la sesión), "ayuda", "salir"');
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 }
 
@@ -134,6 +172,12 @@ async function main(): Promise<void> {
       console.log('');
       continue;
     }
+    if (/^(nuevo|new|reset)$/i.test(goal)) {
+      sessionHistory.length = 0;
+      console.log('  (sesión reiniciada: el agente ya no recordará los pedidos anteriores; los leads siguen en la base)');
+      console.log('');
+      continue;
+    }
     if (/^(ayuda|help)$/i.test(goal)) {
       printBanner();
       continue;
@@ -143,7 +187,9 @@ async function main(): Promise<void> {
     console.log('— agente en marcha…');
     busy = true;
     try {
-      const result = await agent.run(goal);
+      const result = await agent.run(goal, { sessionContext: sessionContext() });
+      sessionHistory.push(summarizeRun(goal, result));
+      while (sessionHistory.length > SESSION_CAP) sessionHistory.shift();
       store.saveRun({ goal, answer: result.answer, turns: result.turns });
       console.log('');
       console.log(`— respuesta (${result.turns} turno(s)) —`);
@@ -156,7 +202,7 @@ async function main(): Promise<void> {
       busy = false;
     }
     console.log('');
-    console.log(`(leads guardados: ${store.countLeads()})`);
+    console.log(`(leads guardados: ${store.countLeads()} | sesión: ${sessionHistory.length} pedido(s) recordados)`);
     console.log('');
   }
 
