@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "llm:test": "tsx src/smoke/llm.ts",
+    "deepseek:test": "tsx src/smoke/deepseek.ts",
     "website:test": "tsx src/smoke/website.ts",
     "qualify:test": "tsx src/smoke/qualify.ts",
     "persist:test": "tsx src/smoke/persist.ts",

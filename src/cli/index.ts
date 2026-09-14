@@ -3,7 +3,7 @@ import readline from 'node:readline';
 import { Agent } from '../core/agent.js';
 import { ConsoleApprover } from '../approval/consoleApprover.js';
 import type { ApprovalGate, ApprovalDecision } from '../approval/types.js';
-import { OllamaProvider } from '../llm/OllamaProvider.js';
+import { createLLMProvider } from '../llm/providerFactory.js';
 import { AgentMemory } from '../memory/memory.js';
 import { LeadStore } from '../persistence/store.js';
 import { buildHostRegistry, defaultCriteria } from '../tools/host.js';
@@ -15,7 +15,7 @@ const MAX_TURNS = Number(process.env.NMDA_MAX_TURNS ?? 10);
 const store = new LeadStore(DB_PATH);
 const memory = new AgentMemory(store);
 const registry = buildHostRegistry(store, memory);
-const provider = new OllamaProvider();
+const provider = createLLMProvider();
 
 const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
 
@@ -96,7 +96,7 @@ function printLeads(): void {
 function printBanner(): void {
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   console.log('  NMDA Lead Agent — modo interactivo');
-  console.log('  modelo: ' + provider.modelName);
+  console.log(`  provider: ${provider.name} — ${provider.modelName}`);
   console.log('  tools:  ' + registry.list().map((t) => t.name).join(', '));
   console.log('  base:   ' + DB_PATH + ` (${store.countLeads()} lead(s))`);
   console.log('  aprobación humana: ' + (REQUIRE_APPROVAL ? 'ACTIVA (save_lead pide OK)' : 'desactivada (NMDA_APPROVAL=1 para activarla)'));
