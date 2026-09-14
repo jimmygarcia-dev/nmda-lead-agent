@@ -339,15 +339,16 @@ async function callDecision(
   schema: JsonSchema,
   turn: number,
 ): Promise<ChatResult> {
-  const stream = input.stream && input.onToken && typeof input.provider.stream === 'function';
+  // Decisiones SIEMPRE por chat() completo (no stream): el streaming SSE de
+  // DeepSeek devuelve el JSON de la decisión TRUNCADO (26/09/2026), lo que hacía
+  // fallar parseDecision en cada turno y el modelo terminaba disculpándose sin
+  // ejecutar ninguna tool. JSON parcial no tiene sentido mostrarlo en vivo.
   return chatWithObserver(
-    () => {
-      const options = { jsonSchema: schema, temperature: 0 };
-      return stream
-        ? (input.provider.stream?.(messages, options, input.onToken) ??
-            input.provider.chat(messages, options))
-        : input.provider.chat(messages, options);
-    },
+    () =>
+      input.provider.chat(messages, {
+        jsonSchema: schema,
+        temperature: 0,
+      }),
     turn,
     input.observer,
   );

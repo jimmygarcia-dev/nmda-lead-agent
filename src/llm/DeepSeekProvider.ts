@@ -92,6 +92,8 @@ export class DeepSeekProvider implements LLMProvider {
     };
 
     if (options.jsonSchema || options.format === 'json') {
+      // Solo json_object está disponible en v4-pro (json_schema da 400).
+      // Garantiza JSON válido (no la forma: el loop se encarga con parseDecision).
       body.response_format = { type: 'json_object' };
     }
     if (options.tools && options.tools.length > 0) {
