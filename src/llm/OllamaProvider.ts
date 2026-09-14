@@ -67,9 +67,10 @@ export class OllamaProvider {
   constructor(config: OllamaConfig = {}) {
     this.host = (config.host ?? process.env.OLLAMA_HOST ?? 'http://localhost:11434').replace(/\/+$/, '');
     this.model = config.model ?? process.env.OLLAMA_MODEL ?? 'qwen2.5:7b';
-    // Timeout por llamada (default 5 min): si Ollama se traba (carga de modelo lenta,
-    // thinking, swap) falla con error claro en vez de quedarse girando para siempre.
-    this.timeoutMs = Number(process.env.OLLAMA_TIMEOUT_MS ?? 300_000);
+    // Timeout por llamada (default 10 min): Ollama local con contexto grande puede
+    // tardar minutos en una decisión; si se traba de verdad, corta con error claro
+    // (y el loop concluye con lo observado en vez de morir).
+    this.timeoutMs = Number(process.env.OLLAMA_TIMEOUT_MS ?? 600_000);
   }
 
   get modelName(): string {
