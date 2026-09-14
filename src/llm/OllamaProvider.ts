@@ -62,10 +62,14 @@ export class OllamaProvider {
   readonly name = 'ollama';
   private readonly host: string;
   private readonly model: string;
+  private readonly timeoutMs: number;
 
   constructor(config: OllamaConfig = {}) {
     this.host = (config.host ?? process.env.OLLAMA_HOST ?? 'http://localhost:11434').replace(/\/+$/, '');
     this.model = config.model ?? process.env.OLLAMA_MODEL ?? 'qwen2.5:7b';
+    // Timeout por llamada (default 5 min): si Ollama se traba (carga de modelo lenta,
+    // thinking, swap) falla con error claro en vez de quedarse girando para siempre.
+    this.timeoutMs = Number(process.env.OLLAMA_TIMEOUT_MS ?? 300_000);
   }
 
   get modelName(): string {
@@ -100,6 +104,7 @@ export class OllamaProvider {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
+      signal: AbortSignal.timeout(this.timeoutMs),
     });
 
     if (!res.ok) {
@@ -156,6 +161,7 @@ export class OllamaProvider {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
+      signal: AbortSignal.timeout(this.timeoutMs),
     });
     if (!res.ok) {
       const text = await res.text();

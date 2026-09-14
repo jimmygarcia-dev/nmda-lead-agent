@@ -39,19 +39,22 @@ export class Spinner {
   private idx = 0;
   private active = false;
   private shownLine = '';
+  private suffix: (() => string) | undefined;
 
-  start(label: string): void {
+  start(label: string, suffix?: () => string): void {
     this.stop();
     if (!isTTY()) return;
     this.active = true;
     this.idx = 0;
+    this.suffix = suffix;
     this.frame(label);
     this.timer = setInterval(() => this.frame(label), 90);
   }
 
   private frame(label: string): void {
     const spinner = this.frames[this.idx++ % this.frames.length];
-    const line = `  ${style.dim(spinner + ' ' + label + '…')}`;
+    const extra = this.suffix ? ` ${this.suffix()}` : '';
+    const line = `  ${style.dim(spinner + ' ' + label + '…')}${style.dim(extra)}`;
     this.shownLine = line;
     process.stdout.write(`\r\x1b[2K${line}`);
   }

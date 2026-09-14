@@ -116,7 +116,7 @@ export async function runLoop(input: LoopInput): Promise<LoopResult> {
     }
 
     const res = await callDecision(input, messages, schema, turn);
-    input.guards?.afterLlmCall();
+    input.guards?.afterLlmCall(res.usage);
 
     const decision = parseDecision(res.content);
     if (!decision.ok) {
@@ -143,9 +143,9 @@ export async function runLoop(input: LoopInput): Promise<LoopResult> {
       return { answer: decision.action.answer, turns: turn, steps };
     }
 
-    // act + observe
+    // act + observe (con resolución de nombre: "searchgoogle" → "search_google")
     const step: AgentStep = { turn, thought: decision.thought, action: decision.action };
-    const toolName = decision.action.tool;
+    const toolName = input.registry.resolve(decision.action.tool);
     const toolArgs = decision.action.args;
     let blockedReason: string | undefined;
 
@@ -216,7 +216,7 @@ export async function runLoop(input: LoopInput): Promise<LoopResult> {
         : 'Se agotaron los turnos de la tarea. No podés llamar más tools. Respondé ahora con kind=final y una conclusión basada en lo observado.',
   });
   const finalRes = await callDecision(input, messages, schema, input.maxTurns + 1);
-  input.guards?.afterLlmCall();
+  input.guards?.afterLlmCall(finalRes.usage);
   const decision = parseDecision(finalRes.content);
   if (decision.ok && decision.action.kind === 'final') {
     const step: AgentStep = {
@@ -230,7 +230,10 @@ export async function runLoop(input: LoopInput): Promise<LoopResult> {
   }
 
   return {
-    answer: 'El agente no llegó a una conclusión en el límite de turnos configurado.',
+    answer:
+      budgetHitReason !== undefined
+        ? `El ciclo se cortó antes de tiempo: ${budgetHitReason}. Revisá el objetivo o subí el presupuesto.`
+        : 'El agente no llegó a una conclusión en el límite de turnos configurado.',
     turns: input.maxTurns,
     steps,
   };

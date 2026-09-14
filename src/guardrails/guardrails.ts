@@ -10,8 +10,12 @@ export interface GuardRailPolicy {
   maxLlmCalls?: number;
   /** Máximo de milisegundos de ejecución. */
   maxDurationMs?: number;
+  /** Presupuesto total de tokens (prompt + completion) por ejecución. */
+  maxTokenBudget?: number;
   /** Máximo de veces que se permite repetir el MISMO tool con la MISMA huella. */
   maxRepeatTool?: number;
+  /** Máximo de veces que el MISMO tool puede invocarse por ejecución (cualquier argumento). */
+  maxSameTool?: number;
   /** Tools que el agente NO puede invocar en esta ejecución. */
   blockedToolNames?: string[];
   /** Patrones que un objetivo no debe pedir (se rechaza antes de hablar con el LLM). */
@@ -35,16 +39,20 @@ function fingerprint(tool: string, args: Record<string, unknown>): string {
  */
 export class Guardrails {
   private llmCalls = 0;
+  private tokens = 0;
   private startedAt = 0;
   private readonly attempts = new Map<string, number>();
+  private readonly perToolUses = new Map<string, number>();
 
   constructor(private readonly policy: GuardRailPolicy) {}
 
   /** Estado de una ejecución nueva. */
   beginRun(): void {
     this.llmCalls = 0;
+    this.tokens = 0;
     this.startedAt = performance.now();
     this.attempts.clear();
+    this.perToolUses.clear();
   }
 
   checkGoal(goal: string): GuardCheck {
@@ -56,8 +64,15 @@ export class Guardrails {
     return { allowed: true };
   }
 
-  afterLlmCall(): void {
+  afterLlmCall(usage?: { promptTokens?: number; completionTokens?: number }): void {
     this.llmCalls++;
+    if (usage) {
+      this.tokens += (usage.promptTokens ?? 0) + (usage.completionTokens ?? 0);
+    }
+  }
+
+  get tokenCount(): number {
+    return this.tokens;
   }
 
   budgetMet(): GuardCheck {
@@ -67,6 +82,12 @@ export class Guardrails {
         allowed: false,
         reason: `presupuesto de ${policy.maxLlmCalls} llamadas al LLM alcanzado`,
       };
+    }
+    if (
+      policy.maxTokenBudget !== undefined &&
+      this.tokens >= policy.maxTokenBudget
+    ) {
+      return { allowed: false, reason: `presupuesto de ${policy.maxTokenBudget} tokens alcanzado` };
     }
     if (policy.maxDurationMs !== undefined && performance.now() - this.startedAt >= policy.maxDurationMs) {
       return {
@@ -81,6 +102,16 @@ export class Guardrails {
     if ((this.policy.blockedToolNames ?? []).includes(tool)) {
       return { allowed: false, reason: `el tool "${tool}" está en la denylist de esta ejecución` };
     }
+    const maxSameTool = this.policy.maxSameTool;
+    if (maxSameTool !== undefined) {
+      const count = this.perToolUses.get(tool) ?? 0;
+      if (count >= maxSameTool) {
+        return {
+          allowed: false,
+          reason: `ya invocaste ${tool} ${count} veces en esta ejecución (máximo ${maxSameTool})`,
+        };
+      }
+    }
     const maxRepeat = this.policy.maxRepeatTool;
     if (maxRepeat !== undefined) {
       const count = this.attempts.get(fingerprint(tool, args)) ?? 0;
@@ -92,6 +123,7 @@ export class Guardrails {
   }
 
   afterTool(tool: string, args: Record<string, unknown>): void {
+    this.perToolUses.set(tool, (this.perToolUses.get(tool) ?? 0) + 1);
     const key = fingerprint(tool, args);
     this.attempts.set(key, (this.attempts.get(key) ?? 0) + 1);
   }
