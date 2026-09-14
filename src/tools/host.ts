@@ -3,6 +3,7 @@ import type { LLMProvider } from '../llm/LLMProvider.js';
 import type { LeadStore } from '../persistence/store.js';
 import type { QualificationCriteria } from '../qualification/types.js';
 import { createSearchTool } from '../search/index.js';
+import { createExportLeadsTool } from './exportCsv.js';
 import { createQualifyTool } from './qualify.js';
 import { createRecallMemoryTool } from './recall.js';
 import { createSaveLeadTool } from './saveLead.js';
@@ -36,7 +37,8 @@ export function buildHostRegistry(
     .register(createWebsiteTool())
     .register(createQualifyTool(defaultCriteria))
     .register(createSaveLeadTool(store))
-    .register(createRecallMemoryTool(memory));
+    .register(createRecallMemoryTool(memory))
+    .register(createExportLeadsTool(store));
   if (llm) {
     registry.register(createWriteEmailTool(llm)).register(createValuePageTool(llm));
   }
