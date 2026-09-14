@@ -8,10 +8,24 @@ import { createRoutedProvider } from '../llm/providerFactory.js';
 import { AgentMemory } from '../memory/memory.js';
 import { LeadStore } from '../persistence/store.js';
 import { buildHostRegistry, defaultCriteria } from '../tools/host.js';
+import { Spinner, createFinalAnswerWriter, style, toolCard } from './ui.js';
 
 const DB_PATH = process.env.NMDA_DB ?? 'data/cli.db';
 const REQUIRE_APPROVAL = process.env.NMDA_APPROVAL === '1';
 const MAX_TURNS = Number(process.env.NMDA_MAX_TURNS ?? 10);
+const STREAM = (process.env.NMDA_STREAM ?? '1') !== '0';
+
+const PERSONA_UNDERDOG = [
+  'Identidad: te llamás Underdog. Sos el prospector B2B del usuario: eficiente, directo y cordial,',
+  'sin vueltas ni falsedades. Nunca inventás datos: si no lo observaste, no lo afirmás. En la',
+  'respuesta final, si hay leads, nombrálos con su veredicto y el siguiente paso concreto.',
+].join('\n');
+
+const EXAMPLES = [
+  'buscá agencias de diseño web en Buenos Aires',
+  'armale un email a la agencia que guardaste',
+  'exportame los leads calificados en un csv',
+];
 
 const store = new LeadStore(DB_PATH);
 const memory = new AgentMemory(store);
@@ -19,6 +33,7 @@ const provider = createRoutedProvider();
 const registry = buildHostRegistry(store, memory, provider);
 
 const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+const spinner = new Spinner();
 
 let busy = false;
 let wantClose = false;
@@ -98,26 +113,19 @@ const agent = new Agent(provider, registry, {
   criteria: defaultCriteria,
   memory,
   approval,
+  persona: PERSONA_UNDERDOG,
   onStep: (step) => {
     if (step.action.kind !== 'tool') return;
-    const label = `[turno ${step.turn}] ${step.action.tool}(${summarize(step.action.args)})`;
-    if (step.error) {
-      console.log(`  ${label}  --  ${step.error.slice(0, 120)}`);
-    } else if (step.result !== undefined) {
-      console.log(`  ${label}`);
-      console.log(`     → ${summarize(step.result, 140)}`);
-    }
+    spinner.stop();
+    const extra = step.error
+      ? { error: step.error }
+      : step.result !== undefined
+        ? { result: step.result }
+        : undefined;
+    console.log(toolCard(step.action.tool, step.action.args, extra));
+    spinner.start('decidiendo');
   },
 });
-
-function summarize(value: unknown, max = 100): string {
-  try {
-    const text = JSON.stringify(value, null, 0);
-    return text.length > max ? text.slice(0, max) + '…' : text;
-  } catch {
-    return String(value);
-  }
-}
 
 function ask(prompt: string): Promise<string> {
   return new Promise((resolve) => rl.question(prompt, resolve));
@@ -142,7 +150,7 @@ function printLeads(): void {
 
 function printBanner(): void {
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  console.log('  NMDA Lead Agent — modo interactivo');
+  console.log(`  ${style.bold('Underdog')} — NMDA Lead Agent (modo interactivo)`);
   console.log(`  provider: ${provider.name} — ${provider.modelName}`);
   if (provider.qualityProvider) {
     console.log(`  ruta calidad (email/valoración): ${provider.qualityProvider.modelName}`);
@@ -156,10 +164,20 @@ function printBanner(): void {
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 }
 
+function printOnboarding(): void {
+  console.log('');
+  console.log(`  ${style.dim('Primera vez? Probá con:')}`);
+  for (const example of EXAMPLES) {
+    console.log(`    ${style.cyan('╰')} ${style.dim(`"${example}"`)}`);
+  }
+  console.log(`  ${style.dim('La sesión recuerda tus pedidos anteriores (escribí "nuevo" para reiniciarla).')}`);
+  console.log('');
+}
+
 async function main(): Promise<void> {
   printBanner();
-  console.log('');
-  console.log('Espero tu objetivo…');
+  if (store.countLeads() === 0) printOnboarding();
+  console.log(`${style.dim('Underdog al acecho…')}`);
   console.log('');
 
   for (;;) {
@@ -183,25 +201,29 @@ async function main(): Promise<void> {
       continue;
     }
 
-    console.log('');
-    console.log('— agente en marcha…');
+    spinner.start('decidiendo');
     busy = true;
+    const writer = createFinalAnswerWriter({ onFirstChar: () => spinner.stop() });
     try {
-      const result = await agent.run(goal, { sessionContext: sessionContext() });
+      const result = await agent.run(goal, {
+        sessionContext: sessionContext(),
+        stream: STREAM,
+        onToken: (d) => writer.push(d),
+      });
+      const printed = writer.end();
       sessionHistory.push(summarizeRun(goal, result));
       while (sessionHistory.length > SESSION_CAP) sessionHistory.shift();
       store.saveRun({ goal, answer: result.answer, turns: result.turns });
+      if (!printed) console.log(`\n${result.answer}`);
       console.log('');
-      console.log(`— respuesta (${result.turns} turno(s)) —`);
-      console.log(result.answer);
     } catch (err) {
+      spinner.stop();
       const message = err instanceof Error ? err.message : String(err);
       console.log('');
       console.log(`ERROR: ${message}`);
     } finally {
       busy = false;
     }
-    console.log('');
     console.log(`(leads guardados: ${store.countLeads()} | sesión: ${sessionHistory.length} pedido(s) recordados)`);
     console.log('');
   }

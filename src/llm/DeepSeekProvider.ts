@@ -134,4 +134,84 @@ export class DeepSeekProvider implements LLMProvider {
 
     return result;
   }
+
+  /** Streaming SSE de /chat/completions (OpenAI-compatible). Devuelve el ChatResult completo. */
+  async stream(
+    messages: ChatMessage[],
+    options: ChatOptions = {},
+    onToken?: (delta: string) => void,
+  ): Promise<ChatResult> {
+    const body: Record<string, unknown> = {
+      model: this.model,
+      messages: messages.map(toDeepSeekMessage),
+      stream: true,
+      stream_options: { include_usage: true },
+      temperature: options.temperature ?? 0,
+    };
+    if (options.jsonSchema || options.format === 'json') {
+      body.response_format = { type: 'json_object' };
+    }
+    if (options.tools && options.tools.length > 0) {
+      body.tools = options.tools.map(toToolDefinition);
+    }
+
+    const res = await fetch(`${this.baseUrl}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${this.apiKey}`,
+      },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`DeepSeek /chat/completions respondió ${res.status}: ${text}`);
+    }
+    if (!res.body) throw new Error('DeepSeek no devolvió body de streaming.');
+
+    let content = '';
+    let usage: ChatResult['usage'];
+    const toolCalls: Array<{ id?: string; function?: { name?: string; arguments?: string } }> = [];
+
+    const decoder = new TextDecoder();
+    for await (const chunk of res.body as unknown as AsyncIterable<Uint8Array>) {
+      const text = decoder.decode(chunk, { stream: true });
+      for (const line of text.split('\n')) {
+        const trimmed = line.trim();
+        if (!trimmed.startsWith('data:')) continue;
+        const payload = trimmed.slice(5).trim();
+        if (payload === '[DONE]') continue;
+        let data: DeepSeekResponse & { choices?: Array<{ delta?: { content?: string | null } }> };
+        try {
+          data = JSON.parse(payload);
+        } catch {
+          continue;
+        }
+        const delta = data.choices?.[0]?.delta?.content;
+        if (typeof delta === 'string' && delta.length > 0) {
+          content += delta;
+          onToken?.(delta);
+        }
+        if (data.usage && data.usage.prompt_tokens !== undefined) {
+          usage = {
+            promptTokens: data.usage.prompt_tokens,
+            completionTokens: data.usage.completion_tokens ?? 0,
+          };
+        }
+        const tc = data.choices?.[0]?.message?.tool_calls;
+        if (tc && tc.length > 0) toolCalls.push(...tc);
+      }
+    }
+
+    const result: ChatResult = { content };
+    if (usage) result.usage = usage;
+    if (toolCalls.length > 0) {
+      result.toolCalls = toolCalls.map((tc) => ({
+        id: tc.id ?? `call_${Math.random().toString(36).slice(2)}`,
+        name: tc.function?.name ?? '',
+        arguments: parseArguments(tc.function?.arguments),
+      }));
+    }
+    return result;
+  }
 }

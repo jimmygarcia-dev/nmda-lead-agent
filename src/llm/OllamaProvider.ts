@@ -127,4 +127,87 @@ export class OllamaProvider {
 
     return result;
   }
+
+  /** Streaming NDJSON de /api/chat (stream:true). Devuelve el ChatResult completo. */
+  async stream(
+    messages: ChatMessage[],
+    options: ChatOptions = {},
+    onToken?: (delta: string) => void,
+  ): Promise<ChatResult> {
+    const toSend = messages.map(toOllamaMessage);
+    if ((options.think ?? !/qwen3/i.test(this.model)) === false && toSend.length > 0) {
+      const last = toSend[toSend.length - 1];
+      if (typeof last.content === 'string' && last.content.length > 0) {
+        last.content += '<|ne|>';
+      }
+    }
+
+    const body: Record<string, unknown> = {
+      model: this.model,
+      messages: toSend,
+      stream: true,
+      temperature: options.temperature ?? 0,
+    };
+    if (options.jsonSchema) {
+      body.format = options.jsonSchema;
+    }
+
+    const res = await fetch(`${this.host}/api/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`Ollama /api/chat respondió ${res.status}: ${text}`);
+    }
+
+    let content = '';
+    let promptEval: number | undefined;
+    let evalCount: number | undefined;
+    let toolCalls: ToolCall[] | undefined;
+
+    if (!res.body) throw new Error('Ollama no devolvió body de streaming.');
+
+    const decoder = new TextDecoder();
+    for await (const chunk of res.body as unknown as AsyncIterable<Uint8Array>) {
+      const text = decoder.decode(chunk, { stream: true });
+      for (const line of text.split('\n')) {
+        const trimmed = line.trim();
+        if (!trimmed) continue;
+        let data: Record<string, unknown>;
+        try {
+          data = JSON.parse(trimmed);
+        } catch {
+          continue;
+        }
+        const delta = (data.message as { content?: string })?.content;
+        if (typeof delta === 'string' && delta.length > 0) {
+          content += delta;
+          onToken?.(delta);
+        }
+        if (typeof data.prompt_eval_count === 'number') promptEval = data.prompt_eval_count;
+        if (typeof data.eval_count === 'number') evalCount = data.eval_count;
+        if (data.message && Array.isArray((data.message as { tool_calls?: unknown[] }).tool_calls)) {
+          toolCalls = ((data.message as { tool_calls?: unknown[] }).tool_calls as Array<{
+            id?: string;
+            function?: { name?: string; arguments?: string };
+          }>).map((tc) => ({
+            id: tc.id ?? `call_${Math.random().toString(36).slice(2)}`,
+            name: tc.function?.name ?? '',
+            arguments: parseArguments(tc.function?.arguments),
+          }));
+        }
+      }
+    }
+
+    const result: ChatResult = { content };
+    if (promptEval !== undefined) {
+      result.usage = { promptTokens: promptEval, completionTokens: evalCount ?? 0 };
+    }
+    if (toolCalls && toolCalls.length > 0) {
+      result.toolCalls = toolCalls;
+    }
+    return result;
+  }
 }
