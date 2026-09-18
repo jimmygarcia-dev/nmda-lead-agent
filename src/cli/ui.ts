@@ -112,6 +112,33 @@ export function toolCard(
 
 /* ── Streaming de la respuesta final ─────────────────────────────────────── */
 
+/**
+ * Escribe la respuesta final con efecto máquina de escribir (solo en TTY).
+ * Sin TTY (pipas, logs) imprime de una. No toca la API: es pura presentación.
+ */
+export function typeOut(text: string): Promise<void> {
+  if (!text) return Promise.resolve();
+  if (!process.stdout.isTTY) {
+    console.log(text);
+    return Promise.resolve();
+  }
+  return new Promise((resolve) => {
+    let i = 0;
+    const step = 4; // chars por tick
+    const tick = 12; // ms entre ticks (~330 chars/seg)
+    const timer = setInterval(() => {
+      const next = Math.min(i + step, text.length);
+      process.stdout.write(text.slice(i, next));
+      i = next;
+      if (i >= text.length) {
+        clearInterval(timer);
+        process.stdout.write('\n');
+        resolve();
+      }
+    }, tick);
+  });
+}
+
 export interface TokenWriter {
   push(delta: string): void;
   end(): string;
