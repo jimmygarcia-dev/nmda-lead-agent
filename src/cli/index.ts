@@ -8,14 +8,13 @@ import { createRoutedProvider } from '../llm/providerFactory.js';
 import { AgentMemory } from '../memory/memory.js';
 import { LeadStore } from '../persistence/store.js';
 import { buildHostRegistry, defaultCriteria } from '../tools/host.js';
-import { Spinner, createFinalAnswerWriter, style, toolCard } from './ui.js';
+import { Spinner, style, toolCard, typeOut } from './ui.js';
 import { Guardrails } from '../guardrails/guardrails.js';
 import type { AgentObserver } from '../observability/types.js';
 
 const DB_PATH = process.env.NMDA_DB ?? 'data/cli.db';
 const REQUIRE_APPROVAL = process.env.NMDA_APPROVAL === '1';
 const MAX_TURNS = Number(process.env.NMDA_MAX_TURNS ?? 10);
-const STREAM = (process.env.NMDA_STREAM ?? '1') !== '0';
 // Guardrails de plata: presupuesto de tokens, límite por tool y de tiempo.
 const GUARD_MAX_TOKENS = Number(process.env.NMDA_MAX_TOKENS ?? 200_000);
 const GUARD_MAX_SAME_TOOL = Number(process.env.NMDA_MAX_SAME_TOOL ?? 3);
@@ -235,18 +234,16 @@ async function main(): Promise<void> {
 
     spinner.start('decidiendo', liveSuffix);
     busy = true;
-    const writer = createFinalAnswerWriter({ onFirstChar: () => spinner.stop() });
     try {
       const result = await agent.run(goal, {
         sessionContext: sessionContext(),
-        stream: STREAM,
-        onToken: (d) => writer.push(d),
       });
-      const printed = writer.end();
+      spinner.stop();
+      // Efecto máquina de escribir (solo TTY); no llama a la API.
+      await typeOut(result.answer);
       sessionHistory.push(summarizeRun(goal, result));
       while (sessionHistory.length > SESSION_CAP) sessionHistory.shift();
       store.saveRun({ goal, answer: result.answer, turns: result.turns });
-      if (!printed) console.log(`\n${result.answer}`);
       console.log('');
     } catch (err) {
       spinner.stop();
